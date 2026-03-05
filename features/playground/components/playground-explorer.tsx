@@ -1,9 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronRight, File, Folder, Plus, FilePlus, FolderPlus, MoreHorizontal, Trash2, Edit3 } from "lucide-react"
+import * as React from "react";
+import {
+  ChevronRight,
+  File,
+  Folder,
+  Plus,
+  FilePlus,
+  FolderPlus,
+  MoreHorizontal,
+  Trash2,
+  Edit3,
+  ArrowLeft,
+} from "lucide-react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -16,14 +31,14 @@ import {
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +46,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,45 +56,73 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import RenameFolderDialog from "./dialogs/rename-folder-dialog"
-import NewFolderDialog from "./dialogs/new-folder-dialog"
-import NewFileDialog from "./dialogs/new-file-dialog"
-import RenameFileDialog from "./dialogs/rename-file-dialog"
-import { DeleteDialog } from "./dialogs/delete-dialog"
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import RenameFolderDialog from "./dialogs/rename-folder-dialog";
+import NewFolderDialog from "./dialogs/new-folder-dialog";
+import NewFileDialog from "./dialogs/new-file-dialog";
+import RenameFileDialog from "./dialogs/rename-file-dialog";
+import { DeleteDialog } from "./dialogs/delete-dialog";
+import Link from "next/link";
 
 // Using the provided interfaces
 interface TemplateFile {
-  filename: string
-  fileExtension: string
-  content: string
+  filename: string;
+  fileExtension: string;
+  content: string;
+  filePath?: string;
 }
 
 /**
  * Represents a folder in the template structure which can contain files and other folders
  */
 interface TemplateFolder {
-  folderName: string
-  items: (TemplateFile | TemplateFolder)[]
+  folderName: string;
+  items: (TemplateFile | TemplateFolder)[];
 }
 
 // Union type for items in the file system
-type TemplateItem = TemplateFile | TemplateFolder
+type TemplateItem = TemplateFile | TemplateFolder;
 
 interface TemplateFileTreeProps {
-  data: TemplateItem
-  onFileSelect?: (file: TemplateFile) => void
-  selectedFile?: TemplateFile
-  title?: string
-  onAddFile?: (file: TemplateFile, parentPath: string) => void
-  onAddFolder?: (folder: TemplateFolder, parentPath: string) => void
-  onDeleteFile?: (file: TemplateFile, parentPath: string) => void
-  onDeleteFolder?: (folder: TemplateFolder, parentPath: string) => void
-  onRenameFile?: (file: TemplateFile, newFilename: string, newExtension: string, parentPath: string) => void
-  onRenameFolder?: (folder: TemplateFolder, newFolderName: string, parentPath: string) => void
+  data: TemplateItem;
+  onFileSelect?: (file: TemplateFile) => void;
+  selectedFile?: TemplateFile;
+  title?: string;
+  onAddFile?: (file: TemplateFile, parentPath: string) => void;
+  onAddFolder?: (folder: TemplateFolder, parentPath: string) => void;
+  onDeleteFile?: (file: TemplateFile, parentPath: string) => void;
+  onDeleteFolder?: (folder: TemplateFolder, parentPath: string) => void;
+  onRenameFile?: (
+    file: TemplateFile,
+    newFilename: string,
+    newExtension: string,
+    parentPath: string,
+  ) => void;
+  onRenameFolder?: (
+    folder: TemplateFolder,
+    newFolderName: string,
+    parentPath: string,
+  ) => void;
+}
+
+function sortItemsVSCodeStyle(items: TemplateItem[]) {
+  return [...items].sort((a, b) => {
+    const aIsFolder = "folderName" in a;
+    const bIsFolder = "folderName" in b;
+
+    // folders first
+    if (aIsFolder && !bIsFolder) return -1;
+    if (!aIsFolder && bIsFolder) return 1;
+
+    // alphabetical by name
+    const aName = aIsFolder ? a.folderName : `${a.filename}.${a.fileExtension}`;
+    const bName = bIsFolder ? b.folderName : `${b.filename}.${b.fileExtension}`;
+
+    return aName.localeCompare(bName);
+  });
 }
 
 export function TemplateFileTree({
@@ -94,17 +137,18 @@ export function TemplateFileTree({
   onRenameFile,
   onRenameFolder,
 }: TemplateFileTreeProps) {
-  const isRootFolder = data && typeof data === "object" && "folderName" in data
-  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = React.useState(false)
-  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = React.useState(false)
+  const isRootFolder = data && typeof data === "object" && "folderName" in data;
+  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = React.useState(false);
+  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] =
+    React.useState(false);
 
   const handleAddRootFile = () => {
-    setIsNewFileDialogOpen(true)
-  }
+    setIsNewFileDialogOpen(true);
+  };
 
   const handleAddRootFolder = () => {
-    setIsNewFolderDialogOpen(true)
-  }
+    setIsNewFolderDialogOpen(true);
+  };
 
   const handleCreateFile = (filename: string, extension: string) => {
     if (onAddFile && isRootFolder) {
@@ -112,25 +156,28 @@ export function TemplateFileTree({
         filename,
         fileExtension: extension,
         content: "",
-      }
-      onAddFile(newFile, "")
+      };
+      onAddFile(newFile, "");
     }
-    setIsNewFileDialogOpen(false)
-  }
+    setIsNewFileDialogOpen(false);
+  };
 
   const handleCreateFolder = (folderName: string) => {
     if (onAddFolder && isRootFolder) {
       const newFolder: TemplateFolder = {
         folderName,
         items: [],
-      }
-      onAddFolder(newFolder, "")
+      };
+      onAddFolder(newFolder, "");
     }
-    setIsNewFolderDialogOpen(false)
-  }
+    setIsNewFolderDialogOpen(false);
+  };
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="none" className="h-full w-full border-r border-border/60 bg-card/70">
+      <Link href="/dashboard" className="p-4 text-muted-foreground hover:text-primary transition-colors">
+        <ArrowLeft className="h-6 w-6" size={40} />
+      </Link>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -154,22 +201,24 @@ export function TemplateFileTree({
           <SidebarGroupContent>
             <SidebarMenu>
               {isRootFolder ? (
-                (data as TemplateFolder).items.map((child, index) => (
-                  <TemplateNode
-                    key={index}
-                    item={child}
-                    onFileSelect={onFileSelect}
-                    selectedFile={selectedFile}
-                    level={0}
-                    path=""
-                    onAddFile={onAddFile}
-                    onAddFolder={onAddFolder}
-                    onDeleteFile={onDeleteFile}
-                    onDeleteFolder={onDeleteFolder}
-                    onRenameFile={onRenameFile}
-                    onRenameFolder={onRenameFolder}
-                  />
-                ))
+                sortItemsVSCodeStyle((data as TemplateFolder).items).map(
+                  (child, index) => (
+                    <TemplateNode
+                      key={index}
+                      item={child}
+                      onFileSelect={onFileSelect}
+                      selectedFile={selectedFile}
+                      level={0}
+                      path=""
+                      onAddFile={onAddFile}
+                      onAddFolder={onAddFolder}
+                      onDeleteFile={onDeleteFile}
+                      onDeleteFolder={onDeleteFolder}
+                      onRenameFile={onRenameFile}
+                      onRenameFolder={onRenameFolder}
+                    />
+                  ),
+                )
               ) : (
                 <TemplateNode
                   item={data}
@@ -189,7 +238,6 @@ export function TemplateFileTree({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarRail />
 
       <NewFileDialog
         isOpen={isNewFileDialogOpen}
@@ -203,21 +251,30 @@ export function TemplateFileTree({
         onCreateFolder={handleCreateFolder}
       />
     </Sidebar>
-  )
+  );
 }
 
 interface TemplateNodeProps {
-  item: TemplateItem
-  onFileSelect?: (file: TemplateFile) => void
-  selectedFile?: TemplateFile
-  level: number
-  path?: string
-  onAddFile?: (file: TemplateFile, parentPath: string) => void
-  onAddFolder?: (folder: TemplateFolder, parentPath: string) => void
-  onDeleteFile?: (file: TemplateFile, parentPath: string) => void
-  onDeleteFolder?: (folder: TemplateFolder, parentPath: string) => void
-  onRenameFile?: (file: TemplateFile, newFilename: string, newExtension: string, parentPath: string) => void
-  onRenameFolder?: (folder: TemplateFolder, newFolderName: string, parentPath: string) => void
+  item: TemplateItem;
+  onFileSelect?: (file: TemplateFile) => void;
+  selectedFile?: TemplateFile;
+  level: number;
+  path?: string;
+  onAddFile?: (file: TemplateFile, parentPath: string) => void;
+  onAddFolder?: (folder: TemplateFolder, parentPath: string) => void;
+  onDeleteFile?: (file: TemplateFile, parentPath: string) => void;
+  onDeleteFolder?: (folder: TemplateFolder, parentPath: string) => void;
+  onRenameFile?: (
+    file: TemplateFile,
+    newFilename: string,
+    newExtension: string,
+    parentPath: string,
+  ) => void;
+  onRenameFolder?: (
+    folder: TemplateFolder,
+    newFolderName: string,
+    parentPath: string,
+  ) => void;
 }
 
 function TemplateNode({
@@ -233,45 +290,55 @@ function TemplateNode({
   onRenameFile,
   onRenameFolder,
 }: TemplateNodeProps) {
-  const isValidItem = item && typeof item === "object"
-  const isFolder = isValidItem && "folderName" in item
-  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = React.useState(false)
-  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = React.useState(false)
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
-  const [isOpen, setIsOpen] = React.useState(level < 2)
+  const isValidItem = item && typeof item === "object";
+  const isFolder = isValidItem && "folderName" in item;
+  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = React.useState(false);
+  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] =
+    React.useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(level < 2);
 
-  if (!isValidItem) return null
+  if (!isValidItem) return null;
 
   if (!isFolder) {
-    const file = item as TemplateFile
-    const fileName = `${file.filename}.${file.fileExtension}`
+    const file = item as TemplateFile;
+    const fileName = `${file.filename}.${file.fileExtension}`;
+    const filePath = path ? `${path}/${fileName}` : fileName;
+    const selectedFilePath = selectedFile?.filePath;
 
     const isSelected =
-      selectedFile && selectedFile.filename === file.filename && selectedFile.fileExtension === file.fileExtension
+      selectedFilePath
+        ? selectedFilePath === filePath
+        : !!selectedFile &&
+          selectedFile.filename === file.filename &&
+          selectedFile.fileExtension === file.fileExtension;
 
     const handleRename = () => {
-      setIsRenameDialogOpen(true)
-    }
+      setIsRenameDialogOpen(true);
+    };
 
     const handleDelete = () => {
-      setIsDeleteDialogOpen(true)
-    }
+      setIsDeleteDialogOpen(true);
+    };
 
     const confirmDelete = () => {
-      onDeleteFile?.(file, path)
-      setIsDeleteDialogOpen(false)
-    }
+      onDeleteFile?.(file, path);
+      setIsDeleteDialogOpen(false);
+    };
 
     const handleRenameSubmit = (newFilename: string, newExtension: string) => {
-      onRenameFile?.(file, newFilename, newExtension, path)
-      setIsRenameDialogOpen(false)
-    }
+      onRenameFile?.(file, newFilename, newExtension, path);
+      setIsRenameDialogOpen(false);
+    };
 
     return (
       <SidebarMenuItem>
         <div className="flex items-center group">
-          <SidebarMenuButton isActive={isSelected} onClick={() => onFileSelect?.(file)} className="flex-1">
+          <SidebarMenuButton
+            isActive={isSelected}
+            onClick={() => onFileSelect?.({ ...file, filePath })}
+            className="flex-1">
             <File className="h-4 w-4 mr-2 shrink-0" />
             <span>{fileName}</span>
           </SidebarMenuButton>
@@ -281,8 +348,7 @@ function TemplateNode({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
                 <MoreHorizontal className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -292,7 +358,9 @@ function TemplateNode({
                 Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+              <DropdownMenuItem
+                onClick={handleDelete}
+                className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -308,43 +376,43 @@ function TemplateNode({
           currentExtension={file.fileExtension}
         />
 
-      <DeleteDialog
-      isOpen={isDeleteDialogOpen}
-      setIsOpen={setIsDeleteDialogOpen}
-      onConfirm={confirmDelete}
-      title="Delete File"
-      description={`Are you sure you want to delete "${fileName}"? This action cannot be undone.`}
-      itemName={fileName}
-      confirmLabel="Delete"
-      cancelLabel="Cancel"
-      />
+        <DeleteDialog
+          isOpen={isDeleteDialogOpen}
+          setIsOpen={setIsDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="Delete File"
+          description={`Are you sure you want to delete "${fileName}"? This action cannot be undone.`}
+          itemName={fileName}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
       </SidebarMenuItem>
-    )
+    );
   } else {
-    const folder = item as TemplateFolder
-    const folderName = folder.folderName
-    const currentPath = path ? `${path}/${folderName}` : folderName
+    const folder = item as TemplateFolder;
+    const folderName = folder.folderName;
+    const currentPath = path ? `${path}/${folderName}` : folderName;
 
     const handleAddFile = () => {
-      setIsNewFileDialogOpen(true)
-    }
+      setIsNewFileDialogOpen(true);
+    };
 
     const handleAddFolder = () => {
-      setIsNewFolderDialogOpen(true)
-    }
+      setIsNewFolderDialogOpen(true);
+    };
 
     const handleRename = () => {
-      setIsRenameDialogOpen(true)
-    }
+      setIsRenameDialogOpen(true);
+    };
 
     const handleDelete = () => {
-      setIsDeleteDialogOpen(true)
-    }
+      setIsDeleteDialogOpen(true);
+    };
 
     const confirmDelete = () => {
-      onDeleteFolder?.(folder, path)
-      setIsDeleteDialogOpen(false)
-    }
+      onDeleteFolder?.(folder, path);
+      setIsDeleteDialogOpen(false);
+    };
 
     const handleCreateFile = (filename: string, extension: string) => {
       if (onAddFile) {
@@ -352,35 +420,34 @@ function TemplateNode({
           filename,
           fileExtension: extension,
           content: "",
-        }
-        onAddFile(newFile, currentPath)
+        };
+        onAddFile(newFile, currentPath);
       }
-      setIsNewFileDialogOpen(false)
-    }
+      setIsNewFileDialogOpen(false);
+    };
 
     const handleCreateFolder = (folderName: string) => {
       if (onAddFolder) {
         const newFolder: TemplateFolder = {
           folderName,
           items: [],
-        }
-        onAddFolder(newFolder, currentPath)
+        };
+        onAddFolder(newFolder, currentPath);
       }
-      setIsNewFolderDialogOpen(false)
-    }
+      setIsNewFolderDialogOpen(false);
+    };
 
     const handleRenameSubmit = (newFolderName: string) => {
-      onRenameFolder?.(folder, newFolderName, path)
-      setIsRenameDialogOpen(false)
-    }
+      onRenameFolder?.(folder, newFolderName, path);
+      setIsRenameDialogOpen(false);
+    };
 
     return (
       <SidebarMenuItem>
         <Collapsible
           open={isOpen}
           onOpenChange={setIsOpen}
-          className="group/collapsible [&[data-state=open]>div>button>svg:first-child]:rotate-90"
-        >
+          className="group/collapsible [&[data-state=open]>div>button>svg:first-child]:rotate-90">
           <div className="flex items-center group">
             <CollapsibleTrigger asChild>
               <SidebarMenuButton className="flex-1">
@@ -395,8 +462,7 @@ function TemplateNode({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoreHorizontal className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -415,7 +481,9 @@ function TemplateNode({
                   Rename
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className="text-destructive">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </DropdownMenuItem>
@@ -425,7 +493,7 @@ function TemplateNode({
 
           <CollapsibleContent>
             <SidebarMenuSub>
-              {folder.items.map((childItem, index) => (
+              {sortItemsVSCodeStyle(folder.items).map((childItem, index) => (
                 <TemplateNode
                   key={index}
                   item={childItem}
@@ -464,18 +532,17 @@ function TemplateNode({
           currentFolderName={folderName}
         />
 
-      <DeleteDialog
-      isOpen={isDeleteDialogOpen}
-      setIsOpen={setIsDeleteDialogOpen}
-      onConfirm={confirmDelete}
-      title="Delete Folder"
-      description={`Are you sure you want to delete "${folderName}" and all its contents? This action cannot be undone.`}
-      itemName={folderName}
-      confirmLabel="Delete"
-      cancelLabel="Cancel"
-      />
+        <DeleteDialog
+          isOpen={isDeleteDialogOpen}
+          setIsOpen={setIsDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="Delete Folder"
+          description={`Are you sure you want to delete "${folderName}" and all its contents? This action cannot be undone.`}
+          itemName={folderName}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
       </SidebarMenuItem>
-    )
+    );
   }
 }
-

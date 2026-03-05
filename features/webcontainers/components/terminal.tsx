@@ -8,7 +8,7 @@ import { SearchAddon } from "xterm-addon-search";
 import "xterm/css/xterm.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Copy, Trash2, Download } from "lucide-react";
+import { Play, Search, Copy, Trash2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TerminalProps {
@@ -38,6 +38,7 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
   const [isConnected, setIsConnected] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [commandInput, setCommandInput] = useState("");
   
   // Command line state
   const currentLine = useRef<string>("");
@@ -45,7 +46,26 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
   const commandHistory = useRef<string[]>([]);
   const historyIndex = useRef<number>(-1);
   const currentProcess = useRef<any>(null);
+  const processInputWriter = useRef<any>(null);
   const shellProcess = useRef<any>(null);
+
+  const normalizeCommand = useCallback((rawCommand: string) => {
+    const trimmed = rawCommand.trim();
+
+    if (/^shadcn\s+/i.test(trimmed)) {
+      return trimmed.replace(/^shadcn/i, "npx shadcn@latest");
+    }
+
+    if (/^npx\s+shadcn\s+/i.test(trimmed)) {
+      return trimmed.replace(/^npx\s+shadcn/i, "npx shadcn@latest");
+    }
+
+    if (/^install\s+/i.test(trimmed)) {
+      return trimmed.replace(/^install\s+/i, "npm install ");
+    }
+
+    return trimmed;
+  }, []);
 
   const terminalThemes = {
     dark: {
@@ -124,6 +144,13 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
   const executeCommand = useCallback(async (command: string) => {
     if (!webContainerInstance || !term.current) return;
 
+    const normalizedCommand = normalizeCommand(command);
+
+    if (currentProcess.current) {
+      term.current.writeln("\r\nA command is already running. Press Ctrl+C to stop it.");
+      return;
+    }
+
     // Add to history
     if (command.trim() && commandHistory.current[commandHistory.current.length - 1] !== command) {
       commandHistory.current.push(command);
@@ -132,13 +159,13 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
 
     try {
       // Handle built-in commands
-      if (command.trim() === "clear") {
+      if (normalizedCommand === "clear") {
         term.current.clear();
         writePrompt();
         return;
       }
 
-      if (command.trim() === "history") {
+      if (normalizedCommand === "history") {
         commandHistory.current.forEach((cmd, index) => {
           term.current!.writeln(`  ${index + 1}  ${cmd}`);
         });
@@ -146,13 +173,26 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
         return;
       }
 
-      if (command.trim() === "") {
+      if (normalizedCommand === "help") {
+        term.current.writeln("\r\nAvailable commands:");
+        term.current.writeln("  help                Show available terminal commands");
+        term.current.writeln("  clear               Clear terminal output");
+        term.current.writeln("  history             Show command history");
+        term.current.writeln("  install <pkg>       Alias for npm install <pkg>");
+        term.current.writeln("  shadcn add <comp>   Alias for npx shadcn@latest add <comp>");
+        term.current.writeln("  npx shadcn add ...  Automatically normalized to @latest");
+        term.current.writeln("  npm/pnpm/yarn/...   Runs directly inside WebContainer");
+        writePrompt();
+        return;
+      }
+
+      if (normalizedCommand === "") {
         writePrompt();
         return;
       }
 
       // Parse command
-      const parts = command.trim().split(' ');
+      const parts = normalizedCommand.split(' ');
       const cmd = parts[0];
       const args = parts.slice(1);
 
@@ -166,6 +206,7 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
       });
 
       currentProcess.current = process;
+      processInputWriter.current = process.input?.getWriter?.() ?? null;
 
       // Handle process output
       process.output.pipeTo(new WritableStream({
@@ -177,23 +218,48 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
       }));
 
       // Wait for process to complete
-      const exitCode = await process.exit;
+      await process.exit;
       currentProcess.current = null;
+      if (processInputWriter.current) {
+        processInputWriter.current.releaseLock();
+        processInputWriter.current = null;
+      }
 
       // Show new prompt
       writePrompt();
 
     } catch (error) {
       if (term.current) {
-        term.current.writeln(`\r\nCommand not found: ${command}`);
+        term.current.writeln(`\r\nCommand failed: ${normalizedCommand}`);
         writePrompt();
       }
       currentProcess.current = null;
+      if (processInputWriter.current) {
+        processInputWriter.current.releaseLock();
+        processInputWriter.current = null;
+      }
     }
-  }, [webContainerInstance, writePrompt]);
+  }, [webContainerInstance, normalizeCommand, writePrompt]);
 
   const handleTerminalInput = useCallback((data: string) => {
     if (!term.current) return;
+
+    if (currentProcess.current && processInputWriter.current) {
+      if (data === "\u0003") {
+        currentProcess.current.kill();
+        currentProcess.current = null;
+        processInputWriter.current.releaseLock();
+        processInputWriter.current = null;
+        term.current.writeln("^C");
+        writePrompt();
+        return;
+      }
+
+      processInputWriter.current.write(data).catch(() => {
+        // ignore transient writer errors
+      });
+      return;
+    }
 
     // Handle special characters
     switch (data) {
@@ -419,6 +485,16 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
     }
   }, [webContainerInstance, connectToWebContainer, isConnected]);
 
+  const runFromInput = useCallback(() => {
+    const command = commandInput.trim();
+    if (!command || !term.current) return;
+
+    term.current.write(`\r\n$ ${command}`);
+    executeCommand(command);
+    setCommandInput("");
+    term.current.focus();
+  }, [commandInput, executeCommand]);
+
   return (
     <div className={cn("flex flex-col h-full bg-background border rounded-lg overflow-hidden", className)}>
       {/* Terminal Header */}
@@ -439,6 +515,31 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
         </div>
 
         <div className="flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2 mr-2">
+            <Input
+              value={commandInput}
+              onChange={(event) => setCommandInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  runFromInput();
+                }
+              }}
+              placeholder="Run command (e.g. npx shadcn add button)"
+              className="h-7 w-72 text-xs"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={runFromInput}
+              disabled={!commandInput.trim()}
+              className="h-7"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Run
+            </Button>
+          </div>
+
           {showSearch && (
             <div className="flex items-center gap-2">
               <Input

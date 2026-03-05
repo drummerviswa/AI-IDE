@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Github as LucideGithub } from "lucide-react";
-import Image from "next/image";
+import { Github as LucideGithub, Linkedin as LucideLinkedin } from "lucide-react";
 
 interface ProjectLink {
   href: string | null;
@@ -14,9 +13,15 @@ interface ProjectLink {
 export function Footer() {
   const socialLinks = [
     {
-      href: "#",
+      href: "https://github.com/drummerviswa",
       icon: (
         <LucideGithub className="w-5 h-5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" />
+      ),
+    },
+    {
+      href: "https://www.linkedin.com/in/drummerviswa",
+      icon: (
+        <LucideLinkedin className="w-5 h-5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" />
       ),
     },
   ];
@@ -40,7 +45,7 @@ export function Footer() {
 
         {/* Copyright Notice */}
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          &copy; {new Date().getFullYear()} Codesnippet. All rights reserved.
+          &copy; {new Date().getFullYear()} Viswanathan P. All rights reserved.
         </p>
       </div>
     </footer>

@@ -60,12 +60,15 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null)
 
+  const normalizedCode = typeof children === "string" ? children : String(children)
+  const resolvedInline = inline ?? (!className && !normalizedCode.includes("\n"))
+
   const match = /language-(\w+)/.exec(className || "")
   const language = match ? match[1] : "text"
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(children)
+      await navigator.clipboard.writeText(normalizedCode)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
@@ -74,7 +77,7 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
   }
 
   const downloadCode = () => {
-    const blob = new Blob([children], { type: "text/plain" })
+    const blob = new Blob([normalizedCode], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -165,15 +168,15 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
     console.log(`Code block feedback: ${type}`)
   }
 
-  if (inline) {
+  if (resolvedInline) {
     return (
       <code className="bg-zinc-800/60 text-zinc-200 px-1.5 py-0.5 rounded text-sm font-mono border border-zinc-700/50">
-        {children}
+        {normalizedCode}
       </code>
     )
   }
 
-  const lineCount = children.split("\n").length
+  const lineCount = normalizedCode.split("\n").length
   const shouldShowControls = lineCount > 3
 
   return (
@@ -312,7 +315,7 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
-                    onClick={() => onInsert(children)}
+                    onClick={() => onInsert(normalizedCode)}
                   >
                     <Insert className="h-3.5 w-3.5" />
                   </Button>
@@ -328,7 +331,7 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors"
-                    onClick={() => onRun(children, language)}
+                    onClick={() => onRun(normalizedCode, language)}
                   >
                     <Play className="h-3.5 w-3.5" />
                   </Button>
@@ -402,11 +405,11 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
               userSelect: "none",
             }}
           >
-            {children}
+              {normalizedCode}
           </SyntaxHighlighter>
 
           {collapsed && lineCount > 20 && (
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1e1e1e] to-transparent flex items-end justify-center pb-2">
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-[#1e1e1e] to-transparent flex items-end justify-center pb-2">
               <Button
                 variant="ghost"
                 size="sm"

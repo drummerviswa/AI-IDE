@@ -41,10 +41,22 @@ import { AIChatSidePanel } from "@/features/ai-chat/components/ai-chat-sidepanel
 interface ToggleAIProps {
   isEnabled: boolean;
   onToggle: (value: boolean) => void;
-  
+
   suggestionLoading: boolean;
   loadingProgress?: number;
   activeFeature?: string;
+  activeFile?: {
+    name: string;
+    content: string;
+    language?: string;
+  };
+  cursorPosition?: { line: number; column: number };
+  onInsertCode?: (
+    code: string,
+    fileName?: string,
+    position?: { line: number; column: number }
+  ) => void;
+  onRunCode?: (code: string, language: string) => void;
 }
 
 const ToggleAI: React.FC<ToggleAIProps> = ({
@@ -54,25 +66,20 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
   suggestionLoading,
   loadingProgress = 0,
   activeFeature,
+  activeFile,
+  cursorPosition,
+  onInsertCode,
+  onRunCode,
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Dummy handler for code insertion from AI chat panel
   const handleInsertCode = (code: string, fileName?: string, position?: { line: number; column: number }) => {
-    // TODO: Implement actual code insertion logic
-    // For now, just log the code and info
-    console.log("Insert code:", { code, fileName, position });
-    // You can add your integration with the editor here
+    onInsertCode?.(code, fileName, position);
   };
 
-  // Dummy handler for running code from AI chat panel
   const handleRunCode = (code: string, language: string) => {
-    console.log("Run code:", { code, language });
+    onRunCode?.(code, language);
   };
-
-  // Dummy activeFile and cursorPosition for demonstration
-  const activeFile = { name: "example.ts", content: "// file content" };
-  const cursorPosition = { line: 1, column: 1 };
 
   return (
     <>
@@ -84,7 +91,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
             className={cn(
               "relative gap-2 h-8 px-3 text-sm font-medium transition-all duration-200",
               isEnabled 
-                ? "bg-zinc-900 hover:bg-zinc-800 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 dark:text-zinc-900 dark:border-zinc-200" 
+                ? "bg-primary hover:bg-primary/90 text-primary-foreground border-primary" 
                 : "bg-background hover:bg-accent text-foreground border-border",
               suggestionLoading && "opacity-75"
             )}
@@ -99,7 +106,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
             {isEnabled ? (
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             ) : (
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -114,7 +121,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
               className={cn(
                 "text-xs",
                 isEnabled 
-                  ? "bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:border-zinc-200" 
+                  ? "bg-primary text-primary-foreground border-primary" 
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -162,7 +169,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
               <div className={cn(
                 "w-8 h-4 rounded-full border transition-all duration-200 relative",
                 isEnabled 
-                  ? "bg-zinc-900 border-zinc-900 dark:bg-zinc-50 dark:border-zinc-50" 
+                  ? "bg-primary border-primary" 
                   : "bg-muted border-border"
               )}>
                 <div className={cn(
@@ -199,7 +206,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
         onRunCode={handleRunCode}
         activeFileName={activeFile?.name}
         activeFileContent={activeFile?.content}
-        activeFileLanguage="TypeScript" // Assuming TypeScript as the language
+        activeFileLanguage={activeFile?.language || "TypeScript"}
         cursorPosition={cursorPosition}
         theme="dark"
       />

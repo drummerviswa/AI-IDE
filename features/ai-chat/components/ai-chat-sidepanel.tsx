@@ -28,13 +28,13 @@ import {
   Search,
   Filter,
   Download,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import Image from "next/image";
 import {
   Tooltip,
   TooltipContent,
@@ -325,6 +325,7 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
   const [streamResponse, setStreamResponse] = useState(true);
+  const [enhancePrompt, setEnhancePrompt] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -742,6 +743,35 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
         });
       }
 
+      if (enhancePrompt) {
+        try {
+          const enhanceResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              action: "enhance",
+              prompt: contextualMessage,
+              context: {
+                fileName: activeFileName,
+                language: activeFileLanguage,
+                codeContent: activeFileContent?.slice(0, 2000),
+              },
+            }),
+          });
+
+          if (enhanceResponse.ok) {
+            const enhanceData = await enhanceResponse.json();
+            if (typeof enhanceData.enhancedPrompt === "string" && enhanceData.enhancedPrompt.trim()) {
+              contextualMessage = enhanceData.enhancedPrompt;
+            }
+          }
+        } catch (enhanceError) {
+          console.warn("Prompt enhancement failed, using original prompt:", enhanceError);
+        }
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -857,6 +887,72 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleQuickAction = async (
+    action: "analyze-codebase" | "generate-feature" | "fix-build-error" | "recommend-packages",
+    payloadLabel: string,
+  ) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          prompt: input,
+          projectSummary: `File: ${activeFileName || "N/A"} • Language: ${activeFileLanguage || "Unknown"}`,
+          activeFile: activeFileName,
+          activeFileContent: activeFileContent,
+          language: activeFileLanguage,
+          requirements: input,
+          errorLog: input,
+          goal: input,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Quick action failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      const content =
+        data.analysis ||
+        data.featurePlan ||
+        data.buildFix ||
+        data.packageRecommendations ||
+        "No response from AI action";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content,
+          timestamp: new Date(),
+          id: Date.now().toString(),
+          type: "suggestion",
+          model: `Quick Action: ${payloadLabel}`,
+        },
+      ]);
+    } catch (error) {
+      console.error("Quick action failed:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Quick action failed. Please try again.",
+          timestamp: new Date(),
+          id: Date.now().toString(),
+          type: "chat",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredMessages = messages
     .filter((msg) => {
       if (filterType === "all") return true;
@@ -909,11 +1005,11 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
             <div className="flex items-center justify-between p-6">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 border rounded-full flex flex-col justify-center items-center">
-                  <Image src={"/logo.svg"} alt="Logo" width={28} height={28} />
+                  <Bot className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-zinc-100">
-                    Enhanced AI Assistant
+                    ViswaCode AI Copilot
                   </h2>
                   <p className="text-sm text-zinc-400">
                     {activeFileName
@@ -974,6 +1070,12 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                     >
                       Stream responses
                     </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={enhancePrompt}
+                      onCheckedChange={setEnhancePrompt}
+                    >
+                      Enhance prompts automatically
+                    </DropdownMenuCheckboxItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={exportChat}>
                       <Download className="h-4 w-4 mr-2" />
@@ -1029,6 +1131,21 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                 </TabsList>
 
                 <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        AI Actions
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleQuickAction("analyze-codebase", "Codebase Explain")}>Explain Codebase</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuickAction("generate-feature", "Feature Scaffold")}>Generate Feature Plan</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuickAction("fix-build-error", "Build Fix")}>Fix Build Error</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuickAction("recommend-packages", "Package Recommend")}>Recommend Packages</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-zinc-500" />
                     <Input
@@ -1149,11 +1266,9 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                             code: ({
                               children,
                               className,
-                              inline: _inline,
                             }) => (
                               <EnhancedCodeBlock
                                 className={className}
-                                inline={_inline as boolean}
                                 onInsert={
                                   onInsertCode
                                     ? (code) => handleInsertCode(code)
@@ -1350,7 +1465,7 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                     }
                   }}
                   disabled={isLoading}
-                  className="min-h-[44px] max-h-32 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500/20 resize-none pr-20"
+                  className="min-h-11 max-h-32 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500/20 resize-none pr-20"
                   rows={1}
                 />
                 <div className="absolute right-3 bottom-3 flex items-center gap-2">

@@ -9,6 +9,7 @@ interface PlaygroundEditorProps {
   activeFile: TemplateFile | undefined
   content: string
   onContentChange: (value: string) => void
+  installedExtensions?: string[]
   suggestion: string | null
   suggestionLoading: boolean
   suggestionPosition: { line: number; column: number } | null
@@ -21,6 +22,7 @@ export const PlaygroundEditor = ({
   activeFile,
   content,
   onContentChange,
+  installedExtensions = [],
   suggestion,
   suggestionLoading,
   suggestionPosition,
@@ -40,6 +42,10 @@ export const PlaygroundEditor = ({
   const suggestionAcceptedRef = useRef(false)
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const tabCommandRef = useRef<any>(null)
+  const extensionProviderDisposablesRef = useRef<any[]>([])
+  const lastTypingAtRef = useRef<number>(0)
+  const contentChangeDisposableRef = useRef<any>(null)
+  const blurDisposableRef = useRef<any>(null)
 
   // Generate unique ID for each suggestion
   const generateSuggestionId = () => `suggestion-${Date.now()}-${Math.random()}`
@@ -273,7 +279,7 @@ export const PlaygroundEditor = ({
 
     // Dispose previous provider
     if (inlineCompletionProviderRef.current) {
-      inlineCompletionProviderRef.current.dispose()
+      // inlineCompletionProviderRef.current.dispose()
       inlineCompletionProviderRef.current = null
     }
 
@@ -300,7 +306,7 @@ export const PlaygroundEditor = ({
 
     return () => {
       if (inlineCompletionProviderRef.current) {
-        inlineCompletionProviderRef.current.dispose()
+        // inlineCompletionProviderRef.current.dispose()
         inlineCompletionProviderRef.current = null
       }
     }
@@ -309,180 +315,333 @@ export const PlaygroundEditor = ({
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor
     monacoRef.current = monaco
-    console.log("Editor instance mounted:", !!editorRef.current)
 
     editor.updateOptions({
       ...defaultEditorOptions,
-      // Enable inline suggestions but with specific settings to prevent conflicts
-      inlineSuggest: {
-        enabled: true,
-        mode: "prefix",
-        suppressSuggestions: false,
-      },
-      // Disable some conflicting suggest features
-      suggest: {
-        preview: false, // Disable preview to avoid conflicts
-        showInlineDetails: false,
-        insertMode: "replace",
-      },
-      // Quick suggestions
-      quickSuggestions: {
-        other: true,
-        comments: false,
-        strings: false,
-      },
-      // Smooth cursor
-      cursorSmoothCaretAnimation: "on",
+      inlineSuggest: { enabled: true },
     })
 
     configureMonaco(monaco)
 
-    // Keyboard shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
-      console.log("Ctrl+Space pressed, triggering suggestion")
       onTriggerSuggestion("completion", editor)
     })
-
-    // CRITICAL: Override Tab key with high priority and prevent default Monaco behavior
-    if (tabCommandRef.current) {
-      tabCommandRef.current.dispose()
-    }
 
     tabCommandRef.current = editor.addCommand(
       monaco.KeyCode.Tab,
       () => {
-        console.log("TAB PRESSED", {
-          hasSuggestion: !!currentSuggestionRef.current,
-          hasActiveSuggestion: hasActiveSuggestionAtPosition(),
-          isAccepting: isAcceptingSuggestionRef.current,
-          suggestionAccepted: suggestionAcceptedRef.current,
-        })
-
-        // CRITICAL: Block if already processing
-        if (isAcceptingSuggestionRef.current) {
-          console.log("BLOCKED: Already in the process of accepting, ignoring Tab")
-          return
-        }
-
-        // CRITICAL: Block if just accepted
-        if (suggestionAcceptedRef.current) {
-          console.log("BLOCKED: Suggestion was just accepted, using default tab")
-          editor.trigger("keyboard", "tab", null)
-          return
-        }
-
-        // If we have an active suggestion at the current position, try to accept it
-        if (currentSuggestionRef.current && hasActiveSuggestionAtPosition()) {
-          console.log("ATTEMPTING to accept suggestion with Tab")
+        if (hasActiveSuggestionAtPosition()) {
           const accepted = acceptCurrentSuggestion()
           if (accepted) {
-            console.log("SUCCESS: Suggestion accepted via Tab, preventing default behavior")
-            return // CRITICAL: Return here to prevent default tab behavior
+            return
           }
-          console.log("FAILED: Suggestion acceptance failed, falling through to default")
         }
-
-        // Default tab behavior (indentation)
-        console.log("DEFAULT: Using default tab behavior")
-        editor.trigger("keyboard", "tab", null)
       },
-      // CRITICAL: Use specific context to override Monaco's built-in Tab handling
-      "editorTextFocus && !editorReadonly && !suggestWidgetVisible",
+      "inlineSuggestionVisible && editorTextFocus && !editorReadonly",
     )
 
-    // Escape to reject
     editor.addCommand(monaco.KeyCode.Escape, () => {
-      console.log("Escape pressed")
       if (currentSuggestionRef.current) {
         onRejectSuggestion(editor)
         clearCurrentSuggestion()
       }
     })
 
-    // Listen for cursor position changes to hide suggestions when moving away
-    editor.onDidChangeCursorPosition((e: any) => {
-      if (isAcceptingSuggestionRef.current) return
-
-      const newPosition = e.position
-
-      // Clear existing suggestion if cursor moved away
-      if (currentSuggestionRef.current && !suggestionAcceptedRef.current) {
-        const suggestionPos = currentSuggestionRef.current.position
-
-        // If cursor moved away from suggestion position, clear it
-        if (
-          newPosition.lineNumber !== suggestionPos.line ||
-          newPosition.column < suggestionPos.column ||
-          newPosition.column > suggestionPos.column + 10
-        ) {
-          console.log("Cursor moved away from suggestion, clearing")
-          clearCurrentSuggestion()
-          onRejectSuggestion(editor)
-        }
-      }
-
-      // Trigger new suggestion if appropriate (simplified)
-      if (!currentSuggestionRef.current && !suggestionLoading) {
-        // Clear any existing timeout
-        if (suggestionTimeoutRef.current) {
-          clearTimeout(suggestionTimeoutRef.current)
-        }
-
-        // Trigger suggestion with a delay
-        suggestionTimeoutRef.current = setTimeout(() => {
-          onTriggerSuggestion("completion", editor)
-        }, 300)
-      }
+    contentChangeDisposableRef.current = editor.onDidChangeModelContent(() => {
+      lastTypingAtRef.current = Date.now()
     })
 
-    // Listen for content changes to detect manual typing over suggestions
-    editor.onDidChangeModelContent((e: any) => {
-      if (isAcceptingSuggestionRef.current) return
+    blurDisposableRef.current = editor.onDidBlurEditorText(() => {
+      const elapsed = Date.now() - lastTypingAtRef.current
+      if (elapsed > 3000) return
 
-      // If user types while there's a suggestion, clear it (unless it's our insertion)
-      if (currentSuggestionRef.current && e.changes.length > 0 && !suggestionAcceptedRef.current) {
-        const change = e.changes[0]
+      setTimeout(() => {
+        const activeElement = document.activeElement as HTMLElement | null
+        const isPreviewOrTerminalTarget =
+          activeElement?.tagName === "IFRAME" ||
+          !!activeElement?.closest(".xterm") ||
+          activeElement?.classList.contains("xterm-helper-textarea")
 
-        // Check if this is our own suggestion insertion
-        if (
-          change.text === currentSuggestionRef.current.text ||
-          change.text === currentSuggestionRef.current.text.replace(/\r/g, "")
-        ) {
-          console.log("Our suggestion was inserted, not clearing")
-          return
+        if (isPreviewOrTerminalTarget && editorRef.current) {
+          editorRef.current.focus()
         }
-
-        // User typed something else, clear the suggestion
-        console.log("User typed while suggestion active, clearing")
-        clearCurrentSuggestion()
-      }
-
-      // Trigger context-aware suggestions on certain typing patterns
-      if (e.changes.length > 0 && !suggestionAcceptedRef.current) {
-        const change = e.changes[0]
-
-        // Trigger suggestions after specific characters
-        if (
-          change.text === "\n" || // New line
-          change.text === "{" || // Opening brace
-          change.text === "." || // Dot notation
-          change.text === "=" || // Assignment
-          change.text === "(" || // Function call
-          change.text === "," || // Parameter separator
-          change.text === ":" || // Object property
-          change.text === ";" // Statement end
-        ) {
-          setTimeout(() => {
-            if (editorRef.current && !currentSuggestionRef.current && !suggestionLoading) {
-              onTriggerSuggestion("completion", editor)
-            }
-          }, 100) // Small delay to let the change settle
-        }
-      }
+      }, 0)
     })
 
     updateEditorLanguage()
   }
+
+  const registerExtensionProviders = useCallback((monaco: Monaco) => {
+    extensionProviderDisposablesRef.current.forEach((disposable) => disposable?.dispose?.())
+    extensionProviderDisposablesRef.current = []
+
+    const parseMithrilSegment = (segment: string) => {
+      const [selectorPart, countPart] = segment.split("*")
+      const count = Number(countPart || "1") || 1
+
+      const tagMatch = selectorPart.match(/^[a-zA-Z][a-zA-Z0-9-]*/)
+      const tag = tagMatch?.[0] || "div"
+
+      const idMatch = selectorPart.match(/#([a-zA-Z0-9_-]+)/)
+      const id = idMatch?.[1] ? `#${idMatch[1]}` : ""
+
+      const classes = Array.from(selectorPart.matchAll(/\.([a-zA-Z0-9_-]+)/g)).map((match) => `.${match[1]}`)
+      const selector = `${tag}${id}${classes.join("")}`
+
+      return { selector, count }
+    }
+
+    const expandMithrilZenCoding = (abbreviation: string) => {
+      const cleaned = abbreviation.trim()
+      if (!cleaned || !/^[a-zA-Z.#][a-zA-Z0-9.#>*_-]*$/.test(cleaned)) return null
+
+      const segments = cleaned.split(">")
+      if (segments.length === 0) return null
+
+      const buildNode = (index: number): string => {
+        const { selector, count } = parseMithrilSegment(segments[index])
+        const hasChild = index < segments.length - 1
+        const childExpression = hasChild ? buildNode(index + 1) : ""
+
+        const node = hasChild
+          ? `m(\"${selector}\", ${childExpression.startsWith("[") ? childExpression : `[${childExpression}]`})`
+          : `m(\"${selector}\")`
+
+        if (count <= 1) return node
+
+        return `[${Array.from({ length: count }, () => node).join(", ")}]`
+      }
+
+      return buildNode(0)
+    }
+
+    const registerSnippetExtension = (
+      extensionId: string,
+      extensionName: string,
+      languages: string[],
+      snippets: Array<{ label: string; body: string }>,
+      triggerCharacters: string[] = [],
+    ) => {
+      if (!installedExtensions.includes(extensionId)) return
+
+      const provider = {
+        triggerCharacters,
+        provideCompletionItems: (model: any, position: any) => {
+          const wordInfo = model.getWordUntilPosition(position)
+          const prefix = (wordInfo?.word || "").toLowerCase()
+
+          const suggestions = snippets
+            .filter((snippet) => !prefix || snippet.label.toLowerCase().startsWith(prefix))
+            .map((snippet) => ({
+              label: snippet.label,
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: snippet.body,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: `${extensionName} extension`,
+              detail: `Installed extension: ${extensionName}`,
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: wordInfo.startColumn,
+                endColumn: wordInfo.endColumn,
+              },
+            }))
+
+          return { suggestions }
+        },
+      }
+
+      languages.forEach((language) => {
+        extensionProviderDisposablesRef.current.push(
+          monaco.languages.registerCompletionItemProvider(language, provider),
+        )
+      })
+    }
+
+    registerSnippetExtension(
+      "emmet",
+      "Emmet",
+      ["html", "javascript", "typescript"],
+      [
+        { label: "div", body: "<div>$0</div>" },
+        { label: "section", body: "<section>$0</section>" },
+        { label: "article", body: "<article>$0</article>" },
+        { label: "button", body: "<button type=\"button\">$0</button>" },
+        { label: "input", body: "<input type=\"text\" />" },
+        { label: "ul", body: "<ul>\n\t<li>$0</li>\n</ul>" },
+        { label: "nav", body: "<nav>$0</nav>" },
+        { label: "main", body: "<main>$0</main>" },
+      ],
+      [".", ">", "#", "*"],
+    )
+
+    if (installedExtensions.includes("emmet")) {
+      const mithrilProvider = {
+        triggerCharacters: [".", ">", "#", "*"],
+        provideCompletionItems: (model: any, position: any) => {
+          const lineContent = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
+          const match = lineContent.match(/([a-zA-Z.#][a-zA-Z0-9.#>*_-]*)$/)
+          if (!match?.[1]) return { suggestions: [] }
+
+          const abbreviation = match[1]
+          if (!abbreviation.includes(".") && !abbreviation.includes("#") && !abbreviation.includes(">") && !abbreviation.includes("*")) {
+            return { suggestions: [] }
+          }
+
+          const expanded = expandMithrilZenCoding(abbreviation)
+          if (!expanded) return { suggestions: [] }
+
+          const startColumn = position.column - abbreviation.length
+
+          return {
+            suggestions: [
+              {
+                label: `mithril:${abbreviation}`,
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: expanded,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "Mithril Zen Coding via Emmet extension",
+                detail: "Installed extension: Emmet (Mithril)",
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn,
+                  endColumn: position.column,
+                },
+              },
+            ],
+          }
+        },
+      }
+
+      extensionProviderDisposablesRef.current.push(
+        monaco.languages.registerCompletionItemProvider("javascript", mithrilProvider),
+        monaco.languages.registerCompletionItemProvider("typescript", mithrilProvider),
+      )
+    }
+
+    registerSnippetExtension(
+      "react-snippets",
+      "React Snippets",
+      ["javascript", "typescript"],
+      [
+        {
+          label: "rfc",
+          body: [
+            "import React from 'react'",
+            "",
+            "interface ${1:Props} {}",
+            "",
+            "const ${2:ComponentName}: React.FC<${1:Props}> = () => {",
+            "  return (",
+            "    <div>$0</div>",
+            "  )",
+            "}",
+            "",
+            "export default ${2:ComponentName}",
+          ].join("\n"),
+        },
+        {
+          label: "rafce",
+          body: [
+            "import React from 'react'",
+            "",
+            "const ${1:ComponentName} = () => {",
+            "  return (",
+            "    <div>$0</div>",
+            "  )",
+            "}",
+            "",
+            "export default ${1:ComponentName}",
+          ].join("\n"),
+        },
+        { label: "useState", body: "const [${1:state}, set${2:State}] = React.useState(${3:null})" },
+        { label: "useEffect", body: ["React.useEffect(() => {", "  $0", "}, [${1:dependencies}])"].join("\n") },
+      ],
+      ["r", "u"],
+    )
+
+    registerSnippetExtension(
+      "tailwind-snippets",
+      "Tailwind CSS Snippets",
+      ["html", "javascript", "typescript"],
+      [
+        { label: "tw-center", body: "className=\"flex items-center justify-center $0\"" },
+        { label: "tw-card", body: "className=\"rounded-lg border bg-card p-4 shadow-sm $0\"" },
+        { label: "tw-btn", body: "className=\"inline-flex items-center rounded-md px-4 py-2 text-sm font-medium $0\"" },
+        { label: "tw-grid", body: "className=\"grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 $0\"" },
+      ],
+      ["t"],
+    )
+
+    registerSnippetExtension(
+      "nextjs-snippets",
+      "Next.js Snippets",
+      ["javascript", "typescript"],
+      [
+        { label: "npage", body: ["export default function ${1:Page}() {", "  return (", "    <main>$0</main>", "  )", "}"].join("\n") },
+        { label: "nlayout", body: ["export default function Layout({ children }: { children: React.ReactNode }) {", "  return <>{children}</>", "}"].join("\n") },
+        { label: "nserver", body: ["export async function GET() {", "  return Response.json({ ok: true })", "}"].join("\n") },
+        { label: "nclient", body: ["\"use client\"", "", "$0"].join("\n") },
+      ],
+      ["n"],
+    )
+
+    registerSnippetExtension(
+      "typescript-essentials",
+      "TypeScript Essentials",
+      ["typescript", "javascript"],
+      [
+        { label: "tinterface", body: ["interface ${1:Name} {", "  $0", "}"].join("\n") },
+        { label: "ttype", body: "type ${1:Name} = ${2:string}" },
+        { label: "tenum", body: ["enum ${1:Name} {", "  ${2:Value} = \"${2:Value}\"", "}"].join("\n") },
+        { label: "tguard", body: ["function is${1:Type}(value: unknown): value is ${1:Type} {", "  return $0", "}"].join("\n") },
+      ],
+      ["t"],
+    )
+
+    registerSnippetExtension(
+      "node-express-snippets",
+      "Node/Express Snippets",
+      ["javascript", "typescript"],
+      [
+        { label: "express-server", body: ["import express from 'express'", "", "const app = express()", "", "app.get('/health', (_req, res) => {", "  res.json({ ok: true })", "})", "", "app.listen(${1:3000}, () => console.log('Server running'))"].join("\n") },
+        { label: "express-route", body: ["router.${1:get}('/${2:path}', async (req, res) => {", "  $0", "})"].join("\n") },
+        { label: "trycatch", body: ["try {", "  $0", "} catch (error) {", "  console.error(error)", "}"].join("\n") },
+      ],
+      ["e"],
+    )
+
+    registerSnippetExtension(
+      "html-css-snippets",
+      "HTML/CSS Snippets",
+      ["html", "css"],
+      [
+        { label: "html5", body: ["<!doctype html>", "<html lang=\"en\">", "<head>", "  <meta charset=\"UTF-8\" />", "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />", "  <title>${1:Document}</title>", "</head>", "<body>", "  $0", "</body>", "</html>"].join("\n") },
+        { label: "css-reset", body: ["* {", "  margin: 0;", "  padding: 0;", "  box-sizing: border-box;", "}"].join("\n") },
+        { label: "flex-center", body: ["display: flex;", "align-items: center;", "justify-content: center;"].join("\n") },
+      ],
+      ["h", "c"],
+    )
+
+    registerSnippetExtension(
+      "json-yaml-snippets",
+      "JSON/YAML Snippets",
+      ["json", "yaml"],
+      [
+        { label: "json-object", body: ["{", "  \"${1:key}\": \"${2:value}\"", "}"].join("\n") },
+        { label: "json-array", body: ["[", "  \"${1:item}\"", "]"].join("\n") },
+        { label: "yaml-basic", body: ["${1:key}: ${2:value}", "${3:enabled}: true"].join("\n") },
+      ],
+      ["j", "y"],
+    )
+  }, [installedExtensions])
+
+  useEffect(() => {
+    if (!monacoRef.current) return
+    registerExtensionProviders(monacoRef.current)
+  }, [installedExtensions, registerExtensionProviders])
+
 
   const updateEditorLanguage = () => {
     if (!activeFile || !monacoRef.current || !editorRef.current) return
@@ -503,18 +662,48 @@ export const PlaygroundEditor = ({
 
   // Cleanup on unmount
   useEffect(() => {
+    const handleFocusIn = () => {
+      const elapsed = Date.now() - lastTypingAtRef.current
+      if (elapsed > 3000) return
+
+      const activeElement = document.activeElement as HTMLElement | null
+      if (!activeElement) return
+
+      const isPreviewOrTerminalTarget =
+        activeElement.tagName === "IFRAME" ||
+        !!activeElement.closest(".xterm") ||
+        activeElement.classList.contains("xterm-helper-textarea")
+
+      if (isPreviewOrTerminalTarget && editorRef.current) {
+        editorRef.current.focus()
+      }
+    }
+
+    window.addEventListener("focusin", handleFocusIn, true)
+
     return () => {
       if (suggestionTimeoutRef.current) {
         clearTimeout(suggestionTimeoutRef.current)
       }
       if (inlineCompletionProviderRef.current) {
-        inlineCompletionProviderRef.current.dispose()
+        // inlineCompletionProviderRef.current.dispose()
         inlineCompletionProviderRef.current = null
       }
       if (tabCommandRef.current) {
-        tabCommandRef.current.dispose()
+        // tabCommandRef.current.dispose()
         tabCommandRef.current = null
       }
+      if (contentChangeDisposableRef.current) {
+        contentChangeDisposableRef.current.dispose()
+        contentChangeDisposableRef.current = null
+      }
+      if (blurDisposableRef.current) {
+        blurDisposableRef.current.dispose()
+        blurDisposableRef.current = null
+      }
+      extensionProviderDisposablesRef.current.forEach((disposable) => disposable?.dispose?.())
+      extensionProviderDisposablesRef.current = []
+      window.removeEventListener("focusin", handleFocusIn, true)
     }
   }, [])
 
@@ -522,16 +711,16 @@ export const PlaygroundEditor = ({
     <div className="h-full relative">
       {/* Loading indicator */}
       {suggestionLoading && (
-        <div className="absolute top-2 right-2 z-10 bg-red-100 dark:bg-red-900 px-2 py-1 rounded text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
-          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        <div className="absolute top-2 right-2 z-10 bg-primary/10 px-2 py-1 rounded text-xs text-primary flex items-center gap-1 border border-primary/20">
+          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
           AI thinking...
         </div>
       )}
 
       {/* Active suggestion indicator */}
       {currentSuggestionRef.current && !suggestionLoading && (
-        <div className="absolute top-2 right-2 z-10 bg-green-100 dark:bg-green-900 px-2 py-1 rounded text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+        <div className="absolute top-2 right-2 z-10 bg-emerald-500/10 px-2 py-1 rounded text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 border border-emerald-500/30">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
           Press Tab to accept
         </div>
       )}

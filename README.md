@@ -1,149 +1,103 @@
-# 🧠 Vibecode Editor – AI-Powered Web IDE
+# ✨ ViswaCode Studio — AI-Powered Web IDE
 
-![Vibecode Editor Thumbnail](public/vibe-code-editor-thumbnail.svg)
+ViswaCode Studio is an AI-first web IDE built by **Viswanathan P** ([drummerviswa](https://github.com/drummerviswa)).
+It combines Monaco, WebContainers, terminal workflows, AI assistance, and template-based project bootstrapping in one browser workspace.
 
-**Vibecode Editor** is a blazing-fast, AI-integrated web IDE built entirely in the browser using **Next.js App Router**, **WebContainers**, **Monaco Editor**, and **local LLMs via Ollama**. It offers real-time code execution, an AI-powered chat assistant, and support for multiple tech stacks — all wrapped in a stunning developer-first UI.
+## 🚀 Core Features
 
----
+- Authentication with NextAuth (Google/GitHub)
+- Dashboard with project listing, starring, and recent access
+- Template-based playground creation (React, Next.js, Express, Hono, Vue, Angular, and more)
+- File explorer with create/rename/delete for files and folders
+- Monaco editor with syntax highlighting, inline AI suggestions, and keyboard workflows
+- Fully resizable IDE panes (sidebar, editor, output, terminal)
+- Output preview available by default (even before opening files)
+- Route URL viewer/input in output panel (e.g. `/test` → `http://localhost:3000/test`)
+- Embedded xterm terminal with command history, command input bar, and package install workflows
+- Custom command normalization in terminal/package runner (e.g. `shadcn add ...` → `npx shadcn@latest add ...`)
+- AI chat integration with code insertion/run workflows
+- Settings page with user profile details
+- Focus retention improvements so editor stays active while typing during output/error updates
 
-## 🚀 Features
+## 🧩 Editor Extensions (Built-in Install Manager)
 
-- 🔐 **OAuth Login with NextAuth** – Supports Google & GitHub login.
-- 🎨 **Modern UI** – Built with TailwindCSS & ShadCN UI.
-- 🌗 **Dark/Light Mode** – Seamlessly toggle between themes.
-- 🧱 **Project Templates** – Choose from React, Next.js, Express, Hono, Vue, or Angular.
-- 🗂️ **Custom File Explorer** – Create, rename, delete, and manage files/folders easily.
-- 🖊️ **Enhanced Monaco Editor** – Syntax highlighting, formatting, keybindings, and AI autocomplete.
-- 💡 **AI Suggestions with Ollama** – Local models give you code completion on `Ctrl + Space` or double `Enter`. Accept with `Tab`.
-- ⚙️ **WebContainers Integration** – Instantly run frontend/backend apps right in the browser.
-- 💻 **Terminal with xterm.js** – Fully interactive embedded terminal experience.
-- 🤖 **AI Chat Assistant** – Share files with the AI and get help, refactors, or explanations.
+The playground includes an in-app extensions dialog with persistent install state.
 
----
+Available extensions:
+
+- Emmet
+- React Snippets
+- Tailwind CSS Snippets
+- Next.js Snippets
+- TypeScript Essentials
+- Node/Express Snippets
+- HTML/CSS Snippets
+- JSON/YAML Snippets
+
+Extra support:
+
+- Emmet Zen Coding for Mithril-style expansions in JS/TS
 
 ## 🧱 Tech Stack
 
-| Layer         | Technology                                   |
-|---------------|----------------------------------------------|
-| Framework     | Next.js 15 (App Router)                      |
-| Styling       | TailwindCSS, ShadCN UI                       |
-| Language      | TypeScript                                   |
-| Auth          | NextAuth (Google + GitHub OAuth)             |
-| Editor        | Monaco Editor                                |
-| AI Suggestion | Ollama (LLMs running locally via Docker)     |
-| Runtime       | WebContainers                                |
-| Terminal      | xterm.js                                     |
-| Database      | MongoDB (via DATABASE_URL)                   |
+- Framework: Next.js 15 (App Router)
+- Language: TypeScript
+- UI: Tailwind CSS + shadcn/ui + Radix
+- Auth: NextAuth + Prisma Adapter
+- Editor: Monaco (`@monaco-editor/react`)
+- Runtime Sandbox: `@webcontainer/api`
+- Terminal: `xterm` + addons
+- State: Zustand
+- Notifications: Sonner
 
----
+## ⚙️ Local Setup
 
-## 🛠️ Getting Started
-
-### 1. Clone the Repo
+### 1) Clone
 
 ```bash
-git clone https://github.com/your-username/vibecode-editor.git
-cd vibecode-editor
-````
+git clone https://github.com/Aestheticsuraj234/vibecode-playground.git
+cd vibecode-playground
+```
 
-### 2. Install Dependencies
+### 2) Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Set Up Environment Variables
+### 3) Configure env
 
-Create a `.env.local` file using the template:
-
-```bash
-cp .env.example .env.local
-```
-
-Then, fill in your credentials:
+Create `.env.local` and set values:
 
 ```env
-AUTH_SECRET=your_auth_secret
-AUTH_GOOGLE_ID=your_google_client_id
-AUTH_GOOGLE_SECRET=your_google_secret
-AUTH_GITHUB_ID=your_github_client_id
-AUTH_GITHUB_SECRET=your_github_secret
-DATABASE_URL=your_mongodb_connection_string
+AUTH_SECRET=...
+AUTH_GOOGLE_ID=...
+AUTH_GOOGLE_SECRET=...
+AUTH_GITHUB_ID=...
+AUTH_GITHUB_SECRET=...
+DATABASE_URL=...
 NEXTAUTH_URL=http://localhost:3000
 ```
 
-### 4. Start Local Ollama Model
-
-Make sure [Ollama](https://ollama.com/) and Docker are installed, then run:
-
-```bash
-ollama run codellama
-```
-
-Or use your preferred model that supports code generation.
-
-### 5. Run the Development Server
+### 4) Run dev server
 
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser.
+Open `http://localhost:3000`.
 
----
+## ⌨️ Useful Shortcuts
 
-## 📁 Project Structure
+- `Ctrl + S`: Save active file
+- `Ctrl + Space`: Trigger AI suggestion
+- `Tab`: Accept inline AI suggestion
 
-```
-.
-├── app/                     # App Router-based pages & routes
-├── components/              # UI components
-├── editor/                 # Monaco, File Explorer, Terminal
-├── lib/                     # Utility functions
-├── public/                  # Static files (incl. thumbnail)
-├── utils/                   # AI helpers, WebContainer logic
-├── .env.example             # Example env vars
-└── README.md
-```
+## 🙏 Credits
 
----
-
-## 🎯 Keyboard Shortcuts
-
-* `Ctrl + Space` or `Double Enter`: Trigger AI suggestions
-* `Tab`: Accept AI suggestion
-* `/`: Open Command Palette (if implemented)
-
----
-
-## ✅ Roadmap
-
-* [x] Google & GitHub Auth via NextAuth
-* [x] Multiple stack templates
-* [x] Monaco Editor + AI
-* [x] WebContainers + terminal
-* [x] AI chat for code assistance
-* [ ] GitHub repo import/export
-* [ ] Save/load playground from DB
-* [ ] Real-time collaboration
-* [ ] Plugin system for templates/tools
-* [ ] One-click deploy via Vercel/Netlify
-
----
+- **Current maintainer / latest iteration:** Viswanathan P ([drummerviswa](https://github.com/drummerviswa))
+- **Previous version author:** [Aestheticsuraj234](https://github.com/Aestheticsuraj234)
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 🙏 Acknowledgements
-
-* [Monaco Editor](https://microsoft.github.io/monaco-editor/)
-* [Ollama](https://ollama.com/) – for offline LLMs
-* [WebContainers](https://webcontainers.io/)
-* [xterm.js](https://xtermjs.org/)
-* [NextAuth.js](https://next-auth.js.org/)
-
-```
-
+MIT (see `LICENSE` if present in repo)

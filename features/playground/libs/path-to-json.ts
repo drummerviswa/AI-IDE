@@ -8,6 +8,7 @@ export interface TemplateFile {
   filename: string;
   fileExtension: string;
   content: string;
+  filePath?: string;
 }
 
 /**

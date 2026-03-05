@@ -13,9 +13,9 @@ export function PlaygroundLayout() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] p-4">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-red-600 mb-2">Something went wrong</h2>
-        <p className="text-gray-600 mb-4">{error}</p>
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold text-destructive mb-2">Something went wrong</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
         <Button onClick={fetchPlaygroundData} variant="destructive">
           Try Again
         </Button>
@@ -26,7 +26,7 @@ export function PlaygroundLayout() {
   if (loadingStep < 3) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] p-4">
-        <div className="w-full max-w-md p-6 rounded-lg shadow-sm border">
+        <div className="w-full max-w-md p-6 rounded-lg shadow-sm border border-border/60 bg-card/70">
           <h2 className="text-xl font-semibold mb-6 text-center">Loading Playground</h2>
           <div className="mb-8">
             <LoadingStep currentStep={loadingStep} step={1} label="Loading playground metadata" />
@@ -35,7 +35,7 @@ export function PlaygroundLayout() {
           </div>
           <div className="w-full h-2 rounded-full overflow-hidden">
             <div
-              className="bg-red-600 h-full transition-all duration-300 ease-in-out"
+              className="bg-primary h-full transition-all duration-300 ease-in-out"
               style={{ width: `${(loadingStep / 3) * 100}%` }}
             />
           </div>

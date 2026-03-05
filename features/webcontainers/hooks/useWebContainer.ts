@@ -2,6 +2,36 @@ import { useState, useEffect, useCallback } from 'react';
 import { WebContainer } from '@webcontainer/api';
 import { TemplateFolder } from '@/features/playground/libs/path-to-json';
 
+let sharedWebContainerInstance: WebContainer | null = null;
+let sharedBootPromise: Promise<WebContainer> | null = null;
+
+async function getOrBootWebContainer(): Promise<WebContainer> {
+  if (sharedWebContainerInstance) {
+    return sharedWebContainerInstance;
+  }
+
+  if (!sharedBootPromise) {
+    sharedBootPromise = WebContainer.boot()
+      .then((instance) => {
+        sharedWebContainerInstance = instance;
+        return instance;
+      })
+      .finally(() => {
+        sharedBootPromise = null;
+      });
+  }
+
+  return sharedBootPromise;
+}
+
+function destroySharedWebContainer() {
+  if (sharedWebContainerInstance) {
+    sharedWebContainerInstance.teardown();
+    sharedWebContainerInstance = null;
+  }
+  sharedBootPromise = null;
+}
+
 interface UseWebContainerProps {
   templateData: TemplateFolder;
 }
@@ -26,7 +56,7 @@ export const useWebContainer = ({ templateData }: UseWebContainerProps): UseWebC
 
     async function initializeWebContainer() {
       try {
-        const webcontainerInstance = await WebContainer.boot();
+        const webcontainerInstance = await getOrBootWebContainer();
         
         if (!mounted) return;
         
@@ -45,9 +75,6 @@ export const useWebContainer = ({ templateData }: UseWebContainerProps): UseWebC
 
     return () => {
       mounted = false;
-      if (instance) {
-        instance.teardown();
-      }
     };
   }, []);
 
@@ -76,12 +103,10 @@ export const useWebContainer = ({ templateData }: UseWebContainerProps): UseWebC
 
   // Added destroy function
   const destroy = useCallback(() => {
-    if (instance) {
-      instance.teardown();
-      setInstance(null);
-      setServerUrl(null);
-    }
-  }, [instance]);
+    destroySharedWebContainer();
+    setInstance(null);
+    setServerUrl(null);
+  }, []);
 
   return { serverUrl, isLoading, error, instance, writeFileSync, destroy };
 };

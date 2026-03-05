@@ -19,13 +19,13 @@ import {
   ImportIcon as Insert,
   FileText,
   Trash2,
+  Bot,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
-import Image from "next/image"
 
 interface FileAttachment {
   id: string
@@ -543,10 +543,10 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
           <div className="flex items-center justify-between p-6">
             <div className="flex items-center gap-3">
               <div className="relative w-10 h-10 border rounded-full flex flex-col justify-center items-center">
-                <Image src={"/logo.svg"} alt="Logo" width={28} height={28} />
+                <Bot className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100">AI Code Assistant</h2>
+                <h2 className="text-lg font-semibold text-zinc-100">ViswaCode AI Assistant</h2>
                 <p className="text-sm text-zinc-400">With file attachments & code insertion</p>
               </div>
             </div>
@@ -588,9 +588,9 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-zinc-500 py-16">
                 <div className="relative w-16 h-16 border rounded-full flex flex-col justify-center items-center mx-auto mb-4">
-                  <Image src={"/logo.svg"} alt="Logo" width={32} height={32} />
+                  <Bot className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-zinc-300">AI Code Assistant</h3>
+                <h3 className="text-xl font-semibold mb-3 text-zinc-300">ViswaCode AI Assistant</h3>
                 <p className="text-zinc-400 max-w-md mx-auto leading-relaxed mb-6">
                   Attach code files, get AI suggestions, and insert code directly into your editor. Paste code or drag &
                   drop files to get started!
@@ -621,7 +621,7 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
                 >
                   {msg.role === "assistant" && (
                     <div className="relative w-10 h-10 border rounded-full flex flex-col justify-center items-center">
-                      <Image src={"/logo.svg"} alt="Logo" width={28} height={28} />
+                      <Bot className="h-6 w-6 text-primary" />
                     </div>
                   )}
 
@@ -677,7 +677,7 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
             {isLoading && (
               <div className="flex items-start gap-4 justify-start">
                 <div className="relative w-10 h-10 border rounded-full flex flex-col justify-center items-center">
-                  <Image src={"/logo.svg"} alt="Logo" width={28} height={28} />
+                  <Bot className="h-6 w-6 text-primary" />
                 </div>
                 <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/50 p-5 rounded-xl rounded-bl-md flex items-center gap-3">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
@@ -720,7 +720,7 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
                   }
                 }}
                 disabled={isLoading}
-                className="min-h-[44px] max-h-32 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500/20 resize-none"
+                className="min-h-11 max-h-32 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500/20 resize-none"
                 rows={1}
               />
               <div className="absolute right-3 bottom-3 flex items-center gap-2">

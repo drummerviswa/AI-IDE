@@ -70,15 +70,17 @@ export async function longPoll<T>(
  * @returns A unique file identifier including full path
  */
 export const generateFileId = (file: TemplateFile, rootFolder: TemplateFolder): string => {
+  if (file.filePath?.trim()) {
+    return file.filePath.replace(/^\/+/, "");
+  }
+
   // Find the file's path in the folder structure
   const path = findFilePath(file, rootFolder)?.replace(/^\/+/, '') || '';
   
-  // Handle empty/undefined file extension
-  const extension = file.fileExtension?.trim();
-  const extensionSuffix = extension ? `.${extension}` : '';
+  if (path) {
+    return path;
+  }
 
-  // Combine path and filename
-  return path
-    ? `${path}/${file.filename}${extensionSuffix}`
-    : `${file.filename}${extensionSuffix}`;
+  const extension = file.fileExtension?.trim();
+  return extension ? `${file.filename}.${extension}` : file.filename;
 }

@@ -32,7 +32,7 @@ export function PlaygroundHeader() {
   const hasUnsavedChanges = openFiles.some((f) => f.hasUnsavedChanges)
 
   return (
-    <header className="h-14 border-b flex items-center px-4 justify-between">
+    <header className="h-14 border-b border-border/60 bg-card/70 backdrop-blur-sm flex items-center px-4 justify-between">
       <div className="flex items-center">
         <SidebarTrigger className="mr-2" />
         <h1 className="text-lg font-semibold">{playgroundData?.name || "Code Editor"}</h1>
@@ -49,19 +49,26 @@ export function PlaygroundHeader() {
             variant="outline"
             onClick={() => handleSave()}
             disabled={!selectedFile.hasUnsavedChanges}
+            className="border-border/70 bg-background/70 hover:bg-accent"
           >
             <Save className="h-4 w-4 mr-2" />
             Save
           </Button>
 
-          <Button size="sm" variant="outline" onClick={handleSaveAll} disabled={!hasUnsavedChanges}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSaveAll}
+            disabled={!hasUnsavedChanges}
+            className="border-border/70 bg-background/70 hover:bg-accent"
+          >
             <Save className="h-4 w-4 mr-2" />
             Save All
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" className="border-border/70 bg-background/70 hover:bg-accent">
                 <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

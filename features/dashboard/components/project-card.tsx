@@ -27,13 +27,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="border border-border/60 rounded-lg overflow-hidden bg-card/70 shadow-md hover:shadow-lg transition-shadow duration-300">
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
             <div
-              className="relative w-12 h-12 flex items-center justify-center rounded-full"
-              style={{ backgroundColor: "#61DAFB15" }}
+              className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 border border-primary/20"
             >
               <Image
                 src={getTemplateIcon(project.template) || "/placeholder.svg"}
@@ -44,8 +43,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
               />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900">{project.title}</h3>
-              <Badge variant="outline" className="bg-[#E93F3F15] text-[#E93F3F] border-[#E93F3F] mt-1">
+              <h3 className="text-xl font-bold text-foreground">{project.title}</h3>
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 mt-1">
                 {project.template}
               </Badge>
             </div>
@@ -64,9 +63,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </div>
         </div>
 
-        <p className="text-gray-600 mb-4 line-clamp-2">{project.description}</p>
+        <p className="text-muted-foreground mb-4 line-clamp-2">{project.description}</p>
 
-        <div className="flex flex-col gap-2 text-sm text-gray-500">
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <User size={14} />
             <span>{project.user.name}</span>

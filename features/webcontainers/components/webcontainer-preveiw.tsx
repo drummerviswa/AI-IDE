@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import type { TemplateFolder } from "@/features/playground/libs/path-to-json";
 import { transformToWebContainerFormat } from "../hooks/transformer";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import TerminalComponent from "./terminal";
+import TerminalComponent, { TerminalRef } from "./terminal";
+import { Input } from "@/components/ui/input";
 import { WebContainer } from "@webcontainer/api";
 
 interface WebContainerPreviewProps {
@@ -16,19 +17,22 @@ interface WebContainerPreviewProps {
   instance: WebContainer | null;
   writeFileSync: (path: string, content: string) => Promise<void>;
   forceResetup?: boolean; // Optional prop to force re-setup
+  showTerminal?: boolean;
+  terminalRef?: React.RefObject<TerminalRef | null>;
 }
 
-const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
-  templateData,
-  error,
-  instance,
-  isLoading,
-  serverUrl,
-  writeFileSync,
-  forceResetup = false,
-}) => {
+const WebContainerPreview: React.FC<WebContainerPreviewProps> = (props) => {
+  const {
+    templateData,
+    error,
+    instance,
+    isLoading,
+    forceResetup = false,
+    showTerminal = true,
+    terminalRef,
+  } = props;
   const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [loadingState, setLoadingState] = useState({
+  const [, setLoadingState] = useState({
     transforming: false,
     mounting: false,
     installing: false,
@@ -40,9 +44,12 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
   const [setupError, setSetupError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [isSetupInProgress, setIsSetupInProgress] = useState(false);
+  const [previewPath, setPreviewPath] = useState("/");
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const lastEditorTypingAtRef = useRef<number>(0);
   
-  // Ref to access terminal methods
-  const terminalRef = useRef<any>(null);
+  const internalTerminalRef = useRef<TerminalRef | null>(null);
+  const activeTerminalRef = terminalRef ?? internalTerminalRef;
 
   // Reset setup state when forceResetup changes
   useEffect(() => {
@@ -75,15 +82,15 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
           const packageJsonExists = await instance.fs.readFile('package.json', 'utf8');
           if (packageJsonExists) {
             // Files are already mounted, just reconnect to existing server
-            if (terminalRef.current?.writeToTerminal) {
-              terminalRef.current.writeToTerminal("🔄 Reconnecting to existing WebContainer session...\r\n");
+            if (activeTerminalRef.current?.writeToTerminal) {
+              activeTerminalRef.current.writeToTerminal("🔄 Reconnecting to existing WebContainer session...\r\n");
             }
             
             // Check if server is already running
             instance.on("server-ready", (port: number, url: string) => {
               console.log(`Reconnected to server on port ${port} at ${url}`);
-              if (terminalRef.current?.writeToTerminal) {
-                terminalRef.current.writeToTerminal(`🌐 Reconnected to server at ${url}\r\n`);
+              if (activeTerminalRef.current?.writeToTerminal) {
+                activeTerminalRef.current.writeToTerminal(`🌐 Reconnected to server at ${url}\r\n`);
               }
               setPreviewUrl(url);
               setLoadingState((prev) => ({
@@ -99,7 +106,7 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
             setLoadingState((prev) => ({ ...prev, starting: true }));
             return;
           }
-        } catch (e) {
+        } catch {
           // Files don't exist, proceed with normal setup
         }
         
@@ -108,11 +115,11 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         setCurrentStep(1);
         
         // Write to terminal
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("🔄 Transforming template data...\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("🔄 Transforming template data...\r\n");
         }
 
-        // @ts-ignore
+        // @ts-expect-error transformer output shape is compatible with WebContainer mount format at runtime
         const files = transformToWebContainerFormat(templateData);
 
         setLoadingState((prev) => ({
@@ -123,14 +130,14 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         setCurrentStep(2);
 
         // Step 2: Mount files
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("📁 Mounting files to WebContainer...\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("📁 Mounting files to WebContainer...\r\n");
         }
         
         await instance.mount(files);
         
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("✅ Files mounted successfully\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("✅ Files mounted successfully\r\n");
         }
 
         setLoadingState((prev) => ({
@@ -141,8 +148,8 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         setCurrentStep(3);
 
         // Step 3: Install dependencies
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("📦 Installing dependencies...\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("📦 Installing dependencies...\r\n");
         }
         
         const installProcess = await instance.spawn("npm", ["install"]);
@@ -152,8 +159,8 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
           new WritableStream({
             write(data) {
               // Write directly to terminal
-              if (terminalRef.current?.writeToTerminal) {
-                terminalRef.current.writeToTerminal(data);
+              if (activeTerminalRef.current?.writeToTerminal) {
+                activeTerminalRef.current.writeToTerminal(data);
               }
             },
           })
@@ -165,8 +172,8 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
           throw new Error(`Failed to install dependencies. Exit code: ${installExitCode}`);
         }
 
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("✅ Dependencies installed successfully\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("✅ Dependencies installed successfully\r\n");
         }
 
         setLoadingState((prev) => ({
@@ -177,17 +184,34 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         setCurrentStep(4);
 
         // Step 4: Start the server
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal("🚀 Starting development server...\r\n");
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal("🚀 Starting development server...\r\n");
         }
-        
-        const startProcess = await instance.spawn("npm", ["run", "start"]);
+
+        let scriptToRun: "dev" | "start" = "start";
+        try {
+          const packageJsonRaw = await instance.fs.readFile("package.json", "utf8");
+          const packageJson = JSON.parse(packageJsonRaw as string);
+          if (packageJson?.scripts?.dev) {
+            scriptToRun = "dev";
+          } else if (packageJson?.scripts?.start) {
+            scriptToRun = "start";
+          }
+        } catch {
+          scriptToRun = "start";
+        }
+
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal(`▶️ Running npm run ${scriptToRun}\r\n`);
+        }
+
+        const startProcess = await instance.spawn("npm", ["run", scriptToRun]);
 
         // Listen for server ready event
         instance.on("server-ready", (port: number, url: string) => {
           console.log(`Server ready on port ${port} at ${url}`);
-          if (terminalRef.current?.writeToTerminal) {
-            terminalRef.current.writeToTerminal(`🌐 Server ready at ${url}\r\n`);
+          if (activeTerminalRef.current?.writeToTerminal) {
+            activeTerminalRef.current.writeToTerminal(`🌐 Server ready at ${url}\r\n`);
           }
           setPreviewUrl(url);
           setLoadingState((prev) => ({
@@ -203,8 +227,8 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         startProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              if (terminalRef.current?.writeToTerminal) {
-                terminalRef.current.writeToTerminal(data);
+              if (activeTerminalRef.current?.writeToTerminal) {
+                activeTerminalRef.current.writeToTerminal(data);
               }
             },
           })
@@ -214,8 +238,8 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
         console.error("Error setting up container:", err);
         const errorMessage = err instanceof Error ? err.message : String(err);
         
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal(`❌ Error: ${errorMessage}\r\n`);
+        if (activeTerminalRef.current?.writeToTerminal) {
+          activeTerminalRef.current.writeToTerminal(`❌ Error: ${errorMessage}\r\n`);
         }
         
         setSetupError(errorMessage);
@@ -231,7 +255,7 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
     }
 
     setupContainer();
-  }, [instance, templateData, isSetupComplete, isSetupInProgress]);
+  }, [instance, templateData, isSetupComplete, isSetupInProgress, activeTerminalRef]);
 
   // Cleanup function to prevent memory leaks
   useEffect(() => {
@@ -240,6 +264,100 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
       // The WebContainer should persist across component re-mounts
     };
   }, []);
+
+  const getStepIcon = (stepIndex: number) => {
+    if (stepIndex < currentStep) {
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    } else if (stepIndex === currentStep) {
+      return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
+    } else {
+      return <div className="h-5 w-5 rounded-full border-2 border-gray-300" />;
+    }
+  };
+
+  const getStepText = (stepIndex: number, label: string) => {
+    const isActive = stepIndex === currentStep;
+    const isComplete = stepIndex < currentStep;
+    
+    return (
+      <span className={`text-sm font-medium ${
+        isComplete ? 'text-green-600' : 
+        isActive ? 'text-blue-600' : 
+        'text-gray-500'
+      }`}>
+        {label}
+      </span>
+    );
+  };
+
+  const handlePreviewLoad = () => {
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      if (activeElement?.tagName === "IFRAME") {
+        activeElement.blur();
+
+        const monacoTextarea = document.querySelector(".monaco-editor textarea") as
+          | HTMLTextAreaElement
+          | null;
+        monacoTextarea?.focus();
+      }
+    });
+  };
+
+  const focusEditorIfUserTyping = useCallback(() => {
+    const elapsed = Date.now() - lastEditorTypingAtRef.current;
+    if (elapsed > 2500) return;
+
+    requestAnimationFrame(() => {
+      const monacoTextarea = document.querySelector(".monaco-editor textarea") as
+        | HTMLTextAreaElement
+        | null;
+      monacoTextarea?.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active) return;
+
+      const isTypingKey =
+        event.key.length === 1 ||
+        event.key === "Backspace" ||
+        event.key === "Delete" ||
+        event.key === "Enter";
+
+      if (!isTypingKey) return;
+
+      if (active.matches(".monaco-editor textarea")) {
+        lastEditorTypingAtRef.current = Date.now();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
+  useEffect(() => {
+    focusEditorIfUserTyping();
+  }, [error, setupError, previewUrl, currentStep, focusEditorIfUserTyping]);
+
+  const resolvedPreviewUrl = (() => {
+    if (!previewUrl) return "";
+
+    try {
+      if (/^https?:\/\//i.test(previewPath)) {
+        return previewPath;
+      }
+
+      const base = new URL(previewUrl);
+      const normalizedPath = previewPath.startsWith("/") ? previewPath : `/${previewPath}`;
+      return `${base.origin}${normalizedPath}`;
+    } catch {
+      return previewUrl;
+    }
+  })();
 
   if (isLoading) {
     return (
@@ -268,31 +386,6 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
       </div>
     );
   }
-
-  const getStepIcon = (stepIndex: number) => {
-    if (stepIndex < currentStep) {
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
-    } else if (stepIndex === currentStep) {
-      return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
-    } else {
-      return <div className="h-5 w-5 rounded-full border-2 border-gray-300" />;
-    }
-  };
-
-  const getStepText = (stepIndex: number, label: string) => {
-    const isActive = stepIndex === currentStep;
-    const isComplete = stepIndex < currentStep;
-    
-    return (
-      <span className={`text-sm font-medium ${
-        isComplete ? 'text-green-600' : 
-        isActive ? 'text-blue-600' : 
-        'text-gray-500'
-      }`}>
-        {label}
-      </span>
-    );
-  };
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -326,36 +419,52 @@ const WebContainerPreview: React.FC<WebContainerPreviewProps> = ({
             </div>
           </div>
 
-          {/* Terminal */}
-          <div className="flex-1 p-4">
-            <TerminalComponent 
-              ref={terminalRef}
-              webContainerInstance={instance}
-              theme="dark"
-              className="h-full"
-            />
-          </div>
+          {showTerminal && (
+            <div className="flex-1 p-4">
+              <TerminalComponent
+                ref={activeTerminalRef}
+                webContainerInstance={instance}
+                theme="dark"
+                className="h-full"
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="h-full flex flex-col">
+          <div className="border-b px-3 py-2 bg-muted/40 space-y-1">
+            <p className="text-xs text-muted-foreground">Current Route URL</p>
+            <Input
+              value={previewPath}
+              onChange={(event) => setPreviewPath(event.target.value)}
+              placeholder="/test"
+              className="h-8 text-xs"
+            />
+            <p className="text-xs font-mono truncate" title={resolvedPreviewUrl}>{resolvedPreviewUrl}</p>
+          </div>
+
           {/* Preview */}
           <div className="flex-1">
             <iframe
-              src={previewUrl}
+              ref={iframeRef}
+              src={resolvedPreviewUrl}
               className="w-full h-full border-none"
               title="WebContainer Preview"
+              tabIndex={-1}
+              onLoad={handlePreviewLoad}
             />
           </div>
           
-          {/* Terminal at bottom when preview is ready */}
-          <div className="h-64 border-t">
-            <TerminalComponent 
-              ref={terminalRef}
-              webContainerInstance={instance}
-              theme="dark"
-              className="h-full"
-            />
-          </div>
+          {showTerminal && (
+            <div className="h-64 border-t">
+              <TerminalComponent
+                ref={activeTerminalRef}
+                webContainerInstance={instance}
+                theme="dark"
+                className="h-full"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

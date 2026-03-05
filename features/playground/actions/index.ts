@@ -3,6 +3,7 @@ import { currentUser } from "@/features/auth/actions";
 import { db } from "@/lib/db"
 import { TemplateFolder } from "../libs/path-to-json";
 import { revalidatePath } from "next/cache";
+import { importGitHubRepository, type PlaygroundTemplate } from "../libs/github-import";
 
 
 // Toggle marked status for a problem
@@ -44,7 +45,7 @@ export const toggleStarMarked = async (playgroundId: string, isChecked: boolean)
 
 export const createPlayground = async (data:{
     title: string;
-    template: "REACT" | "NEXTJS" | "EXPRESS" | "VUE" | "HONO" | "ANGULAR";
+  template: PlaygroundTemplate;
     description?: string;
   })=>{
     const {template , title , description} = data;
@@ -65,6 +66,49 @@ export const createPlayground = async (data:{
         console.log(error)
     }
 }
+
+export const importPlaygroundFromGitHub = async (data: {
+  repository: string;
+  branch?: string;
+  accessToken?: string;
+}) => {
+  const user = await currentUser();
+  if (!user?.id) {
+    throw new Error("You must be logged in to import repositories");
+  }
+
+  const imported = await importGitHubRepository(data.repository, data.branch, data.accessToken);
+
+  try {
+    const createdPlayground = await db.playground.create({
+      data: {
+        title: imported.title,
+        description: `${imported.description} • ${imported.sourceRepo}@${imported.sourceBranch}`,
+        template: imported.template,
+        userId: user.id,
+        templateFiles: {
+          create: {
+            content: JSON.stringify(imported.templateData),
+          },
+        },
+      },
+      include: {
+        templateFiles: true,
+      },
+    });
+
+    revalidatePath("/dashboard");
+    return {
+      ...createdPlayground,
+      importedFileCount: imported.importedFileCount,
+      sourceRepo: imported.sourceRepo,
+      sourceBranch: imported.sourceBranch,
+    };
+  } catch (error) {
+    console.error("Error importing GitHub repository:", error);
+    throw new Error("Failed to create imported playground");
+  }
+};
 
 
 export const getAllPlaygroundForUser = async ()=>{

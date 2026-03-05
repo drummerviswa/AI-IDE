@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/toggle-theme";
 import UserButton from "../auth/components/user-button";
 
@@ -19,39 +19,35 @@ export function Header() {
                             backdrop-blur-md
                             border-x border-b 
                             border-[rgba(230,230,230,0.7)] dark:border-[rgba(70,70,70,0.7)]
-                            w-full sm:min-w-[800px] sm:max-w-[1200px]
+                            w-full sm:min-w-200 sm:max-w-300
                             rounded-b-[28px]
                             px-4 py-2.5
                             relative
                             transition-all duration-300 ease-in-out
-                        `}
-            >
+                        `}>
               <div className="relative z-10 flex items-center justify-between w-full gap-2">
                 {/* Logo Section with Navigation Links */}
                 <div className="flex items-center gap-6 justify-center">
                   <Link
                     href="/"
-                    className="flex items-center gap-2 justify-center"
-                  >
-                    <Image
-                      src={"/logo.svg"}
-                      alt="Logo"
-                      height={60}
-                      width={60}
-                    />
+                    className="flex items-center gap-2 justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-background text-primary">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
 
                     <span className="hidden sm:block font-extrabold text-lg">
-                      VibeCode Editor
+                      ViswaCode Studio
                     </span>
                   </Link>
                   <span className="text-zinc-300 dark:text-zinc-700">|</span>
                   {/* Desktop Navigation Links */}
                   <div className="hidden sm:flex items-center gap-4">
                     <Link
-                      href="/docs/components/background-paths"
-                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-                    >
-                      Docs
+                      href="https://github.com/drummerviswa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
+                      GitHub
                     </Link>
                     {/* <Link
                                             href="/pricing"
@@ -60,13 +56,13 @@ export function Header() {
                                             Pricing
                                         </Link> */}
                     <Link
-                      href="https://codesnippetui.pro/templates?utm_source=codesnippetui.com&utm_medium=header"
+                      href="https://www.linkedin.com/in/drummerviswa"
                       target="_blank"
-                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors flex items-center gap-2"
-                    >
-                      API
+                      rel="noopener noreferrer"
+                      className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors flex items-center gap-2">
+                      LinkedIn
                       <span className="text-green-500 dark:text-green-400 border border-green-500 dark:border-green-400 rounded-lg px-1 py-0.5 text-xs">
-                        New
+                        Connect
                       </span>
                     </Link>
                   </div>
@@ -77,25 +73,27 @@ export function Header() {
                   <span className="text-zinc-300 dark:text-zinc-700">|</span>
                   {/* <HeaderPro /> */}
                   <ThemeToggle />
-                  <UserButton/>
+                  <UserButton />
                 </div>
 
                 {/* Mobile Navigation remains unchanged */}
                 <div className="flex sm:hidden items-center gap-4">
                   <Link
-                    href="/docs/components/action-search-bar"
-                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-                  >
-                    Docs
+                    href="https://github.com/drummerviswa"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
+                    GitHub
                   </Link>
                   <Link
-                    href="/pricing"
-                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-                  >
-                    API
+                    href="https://www.linkedin.com/in/drummerviswa"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
+                    LinkedIn
                   </Link>
                   <ThemeToggle />
-                  <UserButton/>
+                  <UserButton />
                 </div>
               </div>
             </div>

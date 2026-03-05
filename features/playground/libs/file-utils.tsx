@@ -47,7 +47,7 @@ export function getFileIcon(filePath: string): React.ReactNode {
     return (
       <Package
         {...iconProps}
-        className={`${iconProps.className} text-orange-500`}
+        className={`${iconProps.className} text-primary`}
       />
     );
   }
@@ -58,7 +58,7 @@ export function getFileIcon(filePath: string): React.ReactNode {
       return (
         <FileJson
           {...iconProps}
-          className={`${iconProps.className} text-yellow-500`}
+          className={`${iconProps.className} text-primary`}
         />
       );
     case "js":
@@ -66,7 +66,7 @@ export function getFileIcon(filePath: string): React.ReactNode {
       return (
         <FileCode
           {...iconProps}
-          className={`${iconProps.className} text-yellow-500`}
+          className={`${iconProps.className} text-amber-500`}
         />
       );
     case "ts":
@@ -74,7 +74,7 @@ export function getFileIcon(filePath: string): React.ReactNode {
       return (
         <FileCode
           {...iconProps}
-          className={`${iconProps.className} text-blue-500`}
+          className={`${iconProps.className} text-primary`}
         />
       );
     case "css":
@@ -83,21 +83,21 @@ export function getFileIcon(filePath: string): React.ReactNode {
       return (
         <FileCode
           {...iconProps}
-          className={`${iconProps.className} text-purple-500`}
+          className={`${iconProps.className} text-violet-500`}
         />
       );
     case "html":
       return (
         <FileCode
           {...iconProps}
-          className={`${iconProps.className} text-orange-500`}
+          className={`${iconProps.className} text-primary`}
         />
       );
     case "md":
       return (
         <FileText
           {...iconProps}
-          className={`${iconProps.className} text-gray-500`}
+          className={`${iconProps.className} text-muted-foreground`}
         />
       );
     case "png":
@@ -115,7 +115,7 @@ export function getFileIcon(filePath: string): React.ReactNode {
       return (
         <File
           {...iconProps}
-          className={`${iconProps.className} text-gray-500`}
+          className={`${iconProps.className} text-muted-foreground`}
         />
       );
   }

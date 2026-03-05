@@ -41,6 +41,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -87,6 +95,22 @@ export default function ProjectTable({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [favoutrie, setFavourite] = useState(false);
+  const [templateFilter, setTemplateFilter] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
+
+  const templateGroups = Array.from(new Set(projects.map((project) => project.template))).sort();
+
+  const filteredProjects = projects
+    .filter((project) => templateFilter === "ALL" || project.template === templateFilter)
+    .sort((left, right) => {
+      if (sortBy === "title") {
+        return left.title.localeCompare(right.title);
+      }
+
+      const leftDate = new Date(left.createdAt).getTime();
+      const rightDate = new Date(right.createdAt).getTime();
+      return sortBy === "newest" ? rightDate - leftDate : leftDate - rightDate;
+    });
 
   const handleEditClick = (project: Project) => {
     setSelectedProject(project);
@@ -175,7 +199,31 @@ export default function ProjectTable({
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden">
+      <div className="w-full mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <Tabs value={templateFilter} onValueChange={setTemplateFilter}>
+          <TabsList>
+            <TabsTrigger value="ALL">All ({projects.length})</TabsTrigger>
+            {templateGroups.map((template) => (
+              <TabsTrigger key={template} value={template}>
+                {template} ({projects.filter((project) => project.template === template).length})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as "newest" | "oldest" | "title")}>
+          <SelectTrigger className="w-45">
+            <SelectValue placeholder="Sort projects" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="title">Title (A-Z)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="border border-border/60 rounded-lg overflow-hidden bg-card/60">
         <Table>
           <TableHeader>
             <TableRow>
@@ -183,11 +231,11 @@ export default function ProjectTable({
               <TableHead>Template</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>User</TableHead>
-              <TableHead className="w-[50px]">Actions</TableHead>
+              <TableHead className="w-12.5">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell className="font-medium">
                   <div className="flex flex-col">
@@ -197,7 +245,7 @@ export default function ProjectTable({
                     >
                       <span className="font-semibold">{project.title}</span>
                     </Link>
-                    <span className="text-sm text-gray-500 line-clamp-1">
+                    <span className="text-sm text-muted-foreground line-clamp-1">
                       {project.description}
                     </span>
                   </div>
@@ -205,7 +253,7 @@ export default function ProjectTable({
                 <TableCell>
                   <Badge
                     variant="outline"
-                    className="bg-[#E93F3F15] text-[#E93F3F] border-[#E93F3F]"
+                    className="bg-primary/10 text-primary border-primary/30"
                   >
                     {project.template}
                   </Badge>
@@ -293,13 +341,20 @@ export default function ProjectTable({
                 </TableCell>
               </TableRow>
             ))}
+            {filteredProjects.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                  No projects found for selected template
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
       {/* Edit Project Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
             <DialogDescription>

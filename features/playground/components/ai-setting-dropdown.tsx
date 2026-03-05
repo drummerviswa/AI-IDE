@@ -60,15 +60,10 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
                 className="relative h-8 w-8" // Adjusted size for better fit
                 onClick={() => onToggleAISuggestions(!isAISuggestionsEnabled)}
               >
-                {/* Using a placeholder SVG for the logo */}
-                <img
-                  src="/placeholder.svg?height=20&width=20"
-                  alt={isAISuggestionsEnabled ? "AI Enabled" : "AI Disabled"}
-                  className={cn("w-5 h-5", { "grayscale opacity-50": !isAISuggestionsEnabled })}
-                />
+                <Sparkles className={cn("w-5 h-5", { "opacity-50": !isAISuggestionsEnabled, "text-primary": isAISuggestionsEnabled })} />
                 {!isAISuggestionsEnabled && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-4 h-0.5 bg-red-500 rotate-45 rounded-full"></div>
+                    <div className="w-4 h-0.5 bg-destructive rotate-45 rounded-full"></div>
                   </div>
                 )}
               </Button>
@@ -77,9 +72,9 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
           <TooltipContent>{isAISuggestionsEnabled ? "Disable AI Suggestions" : "Enable AI Suggestions"}</TooltipContent>
         </Tooltip>
 
-        <DropdownMenuContent align="end" className="w-72 p-2 dark:bg-gray-900 dark:text-gray-100">
+        <DropdownMenuContent align="end" className="w-72 p-2 bg-popover text-popover-foreground border-border/70">
           {/* Copilot Usage Section */}
-          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-2">
             Copilot Usage
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <SlidersHorizontal className="h-3 w-3" />
@@ -88,35 +83,35 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
           <div className="px-2 py-1">
             <div className="text-sm font-medium flex items-center justify-between mb-1">
               Code completions
-              <span className="text-xs text-gray-600 dark:text-gray-400">{codeCompletionsUsage}%</span>
+              <span className="text-xs text-muted-foreground">{codeCompletionsUsage}%</span>
             </div>
-            <Progress value={codeCompletionsUsage} className="h-1.5 mb-3" indicatorColor="bg-blue-500" />
+            <Progress value={codeCompletionsUsage} className="h-1.5 mb-3" indicatorColor="bg-primary" />
 
             <div className="text-sm font-medium flex items-center justify-between mb-1">
               Chat messages
-              <span className="text-xs text-gray-600 dark:text-gray-400">{chatMessagesUsage}%</span>
+              <span className="text-xs text-muted-foreground">{chatMessagesUsage}%</span>
             </div>
-            <Progress value={chatMessagesUsage} className="h-1.5 mb-3" indicatorColor="bg-blue-500" />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Allowance resets {allowanceResetDate}.</p>
+            <Progress value={chatMessagesUsage} className="h-1.5 mb-3" indicatorColor="bg-primary" />
+            <p className="text-xs text-muted-foreground mt-2">Allowance resets {allowanceResetDate}.</p>
           </div>
 
           <DropdownMenuSeparator className="my-2" />
 
           {/* Workspace Index Section */}
-          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-2">
             Workspace Index
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <ExternalLink className="h-3 w-3" />
             </Button>
           </DropdownMenuLabel>
           <div className="px-2 py-1">
-            <p className="text-sm text-gray-700 dark:text-gray-300">Remotely indexed</p>
+            <p className="text-sm text-muted-foreground">Remotely indexed</p>
           </div>
 
           <DropdownMenuSeparator className="my-2" />
 
           {/* Settings Section */}
-          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+          <DropdownMenuLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-2">
             Settings
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <Settings className="h-3 w-3" />
@@ -125,21 +120,21 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
           <DropdownMenuCheckboxItem
             checked={isCodeCompletionAllFilesEnabled}
             onCheckedChange={onToggleCodeCompletionAllFiles}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Code completions (all files)
           </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem
             checked={isCodeCompletionTSXEnabled}
             onCheckedChange={onToggleCodeCompletionTSX}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Code completions (TypeScript JSX)
           </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem
             checked={isNextEditSuggestionsEnabled}
             onCheckedChange={onToggleNextEditSuggestions}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Next edit suggestions
           </DropdownMenuCheckboxItem>
@@ -150,7 +145,7 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
           <DropdownMenuItem
             onClick={() => onTriggerAISuggestion("completion", "overlay")}
             disabled={!activeFile || suggestionLoading || !isAISuggestionsEnabled}
-            className="flex items-center justify-between text-sm dark:text-gray-300"
+            className="flex items-center justify-between text-sm"
           >
             Get AI Suggestion (Ctrl+Space)
             {suggestionLoading ? (
@@ -162,21 +157,21 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
           <DropdownMenuItem
             onClick={() => onTriggerAISuggestion("function", "overlay")}
             disabled={!activeFile || suggestionLoading || !isAISuggestionsEnabled}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Function Suggestion
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => onTriggerAISuggestion("variable", "overlay")}
             disabled={!activeFile || suggestionLoading || !isAISuggestionsEnabled}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Variable Suggestion
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => onTriggerAISuggestion("import", "overlay")}
             disabled={!activeFile || suggestionLoading || !isAISuggestionsEnabled}
-            className="text-sm dark:text-gray-300"
+            className="text-sm"
           >
             Import Suggestion
           </DropdownMenuItem>

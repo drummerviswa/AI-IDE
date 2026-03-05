@@ -10,15 +10,15 @@ export const LoadingStep: React.FC<LoadingStepProps> = ({
     <div
       className={`rounded-full p-1 ${
         currentStep === step
-          ? "bg-red-100"
+          ? "bg-primary/15"
           : currentStep > step
-          ? "bg-green-100"
-          : "bg-gray-100"
+          ? "bg-emerald-500/15"
+          : "bg-muted"
       }`}
     >
       {currentStep > step ? (
         <svg
-          className="h-4 w-4 text-green-500"
+          className="h-4 w-4 text-emerald-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -31,18 +31,18 @@ export const LoadingStep: React.FC<LoadingStepProps> = ({
           />
         </svg>
       ) : currentStep === step ? (
-        <Loader2 className="h-4 w-4 text-red-500 animate-spin" />
+        <Loader2 className="h-4 w-4 text-primary animate-spin" />
       ) : (
-        <div className="h-4 w-4 rounded-full bg-gray-300" />
+        <div className="h-4 w-4 rounded-full bg-muted-foreground/40" />
       )}
     </div>
     <span
       className={`text-sm ${
         currentStep === step
-          ? "text-red-600 font-medium"
+          ? "text-primary font-medium"
           : currentStep > step
-          ? "text-green-600"
-          : "text-gray-500"
+          ? "text-emerald-600 dark:text-emerald-400"
+          : "text-muted-foreground"
       }`}
     >
       {label}

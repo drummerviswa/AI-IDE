@@ -28,12 +28,12 @@ export function StatusBar({
   lastSaved,
 }: StatusBarProps) {
   return (
-    <div className="h-6 bg-muted/50 border-t flex items-center justify-between px-4 text-xs">
+    <div className="h-6 bg-card/70 border-t border-border/60 flex items-center justify-between px-4 text-xs">
       <div className="flex items-center gap-4">
         {/* Connection Status */}
         <div className="flex items-center gap-1">
-          {isConnected ? <Wifi className="h-3 w-3 text-green-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
-          <span className={isConnected ? "text-green-600" : "text-red-600"}>
+          {isConnected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-destructive" />}
+          <span className={isConnected ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}>
             {isConnected ? "Connected" : "Disconnected"}
           </span>
         </div>
@@ -51,7 +51,7 @@ export function StatusBar({
         {/* Unsaved Changes */}
         {hasUnsavedChanges && (
           <>
-            <div className="flex items-center gap-1 text-amber-600">
+            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-3 w-3" />
               <span>Unsaved changes</span>
             </div>
@@ -62,7 +62,7 @@ export function StatusBar({
         {/* Auto Save Status */}
         {autoSaveEnabled && (
           <>
-            <div className="flex items-center gap-1 text-blue-600">
+            <div className="flex items-center gap-1 text-primary">
               <Zap className="h-3 w-3" />
               <span>Auto Save</span>
             </div>
@@ -73,7 +73,7 @@ export function StatusBar({
         {/* Last Saved */}
         {lastSaved && (
           <>
-            <div className="flex items-center gap-1 text-green-600">
+            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
               <CheckCircle className="h-3 w-3" />
               <span>Saved {lastSaved.toLocaleTimeString()}</span>
             </div>
