@@ -1,4 +1,12 @@
 # ✨ ViswaCode Studio — AI-Powered Web IDE
+Landing Page
+!["Landing Page"](./assets/landing.png)
+Language Selection
+!["Language Selection"](./assets/langselc.png)
+Importing GitHub Repo
+!["Importing GitHub Repo"](./assets/github.png)
+Playground with Code Editor, Output, and Terminal
+!["Playground"](./assets/playg.png)
 
 ViswaCode Studio is an AI-first web IDE built by **Viswanathan P** ([drummerviswa](https://github.com/drummerviswa)).
 It combines Monaco, WebContainers, terminal workflows, AI assistance, and template-based project bootstrapping in one browser workspace.
