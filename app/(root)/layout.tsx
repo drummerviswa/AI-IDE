@@ -6,8 +6,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | ViswaCode Studio",
-    default: "ViswaCode Studio by Viswanathan P",
+    template: "%s | CodeAI",
+    default: "CodeAI — AI-Powered Web IDE",
   },
 };
 

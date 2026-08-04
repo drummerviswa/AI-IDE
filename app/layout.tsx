@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-providers";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-
-
-})
-
 export const metadata: Metadata = {
-  title: "ViswaCode Studio",
+  title: "CodeAI — AI-Powered Web IDE",
   description:
-    "ViswaCode Studio by Viswanathan P is an AI-powered web IDE for building, running, and shipping full-stack projects with speed.",
+    "CodeAI is an AI-powered browser-based IDE. Code, run, and ship full-stack projects instantly — with Monaco Editor, WebContainers, and Gemini AI built in.",
+  keywords: ["AI IDE", "browser IDE", "Monaco Editor", "WebContainers", "CodeAI"],
+  authors: [{ name: "Viswanathan P" }],
+  openGraph: {
+    title: "CodeAI — AI-Powered Web IDE",
+    description: "Code, run, and ship full-stack projects instantly in your browser.",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({
@@ -24,14 +23,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   const session = await auth()
   return (
     <SessionProvider session={session}>
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={` ${poppins.className} antialiased`}
-      >
+      <body className="antialiased font-sans">
         <ThemeProvider
         attribute="class"
         defaultTheme="system"

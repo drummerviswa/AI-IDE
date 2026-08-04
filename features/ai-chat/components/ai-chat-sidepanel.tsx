@@ -343,6 +343,22 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
     return () => clearTimeout(timeoutId);
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    const handlePrefill = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text: string; mode?: "chat" | "review" | "fix" | "optimize" }>;
+      if (customEvent.detail?.text) {
+        setInput(customEvent.detail.text);
+      }
+      if (customEvent.detail?.mode) {
+        setChatMode(customEvent.detail.mode);
+      }
+    };
+    window.addEventListener("codeai:prefill-chat", handlePrefill);
+    return () => {
+      window.removeEventListener("codeai:prefill-chat", handlePrefill);
+    };
+  }, []);
+
   // Enhanced language detection with more file types
   const detectLanguage = (fileName: string, content: string): string => {
     const ext = fileName.split(".").pop()?.toLowerCase();
@@ -789,22 +805,90 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const suggestions = generateCodeSuggestions(input.trim(), attachments);
+        if (streamResponse) {
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          if (!reader) {
+            throw new Error("No response reader available");
+          }
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: data.response,
-            timestamp: new Date(),
-            suggestions: suggestions.length > 0 ? suggestions : undefined,
-            id: Date.now().toString(),
-            type: messageType,
-            tokens: data.tokens,
-            model: data.model || "AI Assistant",
-          },
-        ]);
+          const assistantMessageId = Date.now().toString();
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "",
+              timestamp: new Date(),
+              id: assistantMessageId,
+              type: messageType,
+              model: "Gemini 3.1 Flash Lite",
+            },
+          ]);
+
+          let accumulatedContent = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunkStr = decoder.decode(value, { stream: true });
+            const lines = chunkStr.split("\n");
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              if (trimmed === "data: [DONE]") continue;
+
+              if (trimmed.startsWith("data: ")) {
+                try {
+                  const jsonStr = trimmed.slice(6);
+                  const parsed = JSON.parse(jsonStr);
+                  if (parsed.chunk) {
+                    accumulatedContent += parsed.chunk;
+                    setMessages((prev) =>
+                      prev.map((msg) =>
+                        msg.id === assistantMessageId
+                          ? { ...msg, content: accumulatedContent }
+                          : msg
+                      )
+                    );
+                  } else if (parsed.error) {
+                    console.error("Stream chunk error:", parsed.error);
+                  }
+                } catch (e) {
+                  console.warn("Could not parse SSE chunk:", trimmed, e);
+                }
+              }
+            }
+          }
+
+          const suggestions = generateCodeSuggestions(input.trim(), attachments);
+          if (suggestions.length > 0) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, suggestions }
+                  : msg
+              )
+            );
+          }
+        } else {
+          const data = await response.json();
+          const suggestions = generateCodeSuggestions(input.trim(), attachments);
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: data.response,
+              timestamp: new Date(),
+              suggestions: suggestions.length > 0 ? suggestions : undefined,
+              id: Date.now().toString(),
+              type: messageType,
+              tokens: data.tokens,
+              model: data.model || "AI Assistant",
+            },
+          ]);
+        }
       } else {
         setMessages((prev) => [
           ...prev,
@@ -1009,7 +1093,7 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-zinc-100">
-                    ViswaCode AI Copilot
+                    CodeAI Copilot
                   </h2>
                   <p className="text-sm text-zinc-400">
                     {activeFileName

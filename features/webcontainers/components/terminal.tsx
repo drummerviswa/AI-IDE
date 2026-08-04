@@ -8,7 +8,7 @@ import { SearchAddon } from "xterm-addon-search";
 import "xterm/css/xterm.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Play, Search, Copy, Trash2, Download } from "lucide-react";
+import { Play, Search, Copy, Trash2, Download, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TerminalProps {
@@ -442,6 +442,30 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
     }
   }, []);
 
+  const handleFixWithAi = useCallback(() => {
+    if (!term.current) return;
+    const buffer = term.current.buffer.active;
+    let content = "";
+    
+    // Grab the last 100 lines of the active terminal buffer
+    const startLine = Math.max(0, buffer.length - 100);
+    for (let i = startLine; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        content += line.translateToString(true) + "\n";
+      }
+    }
+
+    // Trigger the global custom events to open the AI Chat panel & prefill it
+    window.dispatchEvent(new CustomEvent("codeai:open-chat"));
+    window.dispatchEvent(new CustomEvent("codeai:prefill-chat", {
+      detail: {
+        text: `Analyze and help me fix this terminal error/output:\n\n\`\`\`bash\n${content.trim()}\n\`\`\``,
+        mode: "fix"
+      }
+    }));
+  }, []);
+
   const searchInTerminal = useCallback((term: string) => {
     if (searchAddon.current && term) {
       searchAddon.current.findNext(term);
@@ -537,6 +561,15 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
             >
               <Play className="h-3 w-3 mr-1" />
               Run
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFixWithAi}
+              className="h-7 gap-1.5 border-violet-500/30 hover:border-violet-500 text-violet-400 hover:text-violet-300 bg-violet-950/15 hover:bg-violet-950/30 transition-all duration-200"
+            >
+              <Sparkles className="h-3 w-3 text-violet-400" />
+              <span>Fix with AI</span>
             </Button>
           </div>
 

@@ -85,13 +85,13 @@ export const AISettingsDropdown: React.FC<AISettingsDropdownProps> = ({
               Code completions
               <span className="text-xs text-muted-foreground">{codeCompletionsUsage}%</span>
             </div>
-            <Progress value={codeCompletionsUsage} className="h-1.5 mb-3" indicatorColor="bg-primary" />
+            <Progress value={codeCompletionsUsage} className="h-1.5 mb-3" />
 
             <div className="text-sm font-medium flex items-center justify-between mb-1">
               Chat messages
               <span className="text-xs text-muted-foreground">{chatMessagesUsage}%</span>
             </div>
-            <Progress value={chatMessagesUsage} className="h-1.5 mb-3" indicatorColor="bg-primary" />
+            <Progress value={chatMessagesUsage} className="h-1.5 mb-3" />
             <p className="text-xs text-muted-foreground mt-2">Allowance resets {allowanceResetDate}.</p>
           </div>
 

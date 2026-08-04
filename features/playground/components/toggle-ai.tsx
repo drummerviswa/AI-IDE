@@ -81,6 +81,16 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
     onRunCode?.(code, language);
   };
 
+  React.useEffect(() => {
+    const handleOpenChat = () => {
+      setIsChatOpen(true);
+    };
+    window.addEventListener("codeai:open-chat", handleOpenChat);
+    return () => {
+      window.removeEventListener("codeai:open-chat", handleOpenChat);
+    };
+  }, []);
+
   return (
     <>
       <DropdownMenu>

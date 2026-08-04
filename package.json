@@ -1,16 +1,17 @@
 {
-  "name": "viswacode-studio",
+  "name": "codeai",
   "version": "0.1.0",
   "private": true,
   "author": "Viswanathan P",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
+    "build": "node --use-system-ca ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.0.1",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^6.10.0",
@@ -86,8 +87,8 @@
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "eslint": "^9",
-    "prisma": "6.19",
     "eslint-config-next": "15.3.1",
+    "prisma": "6.19",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.9",
     "typescript": "^5"

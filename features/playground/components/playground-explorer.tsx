@@ -5,6 +5,7 @@ import {
   ChevronRight,
   File,
   Folder,
+  FolderOpen,
   Plus,
   FilePlus,
   FolderPlus,
@@ -13,6 +14,40 @@ import {
   Edit3,
   ArrowLeft,
 } from "lucide-react";
+
+// ── File-type icon map ────────────────────────────────────────────────────────
+function getFileIcon(extension: string): React.ReactNode {
+  const ext = extension.toLowerCase()
+  const base = "h-4 w-4 mr-2 shrink-0"
+
+  const map: Record<string, React.ReactNode> = {
+    ts: <span className={`${base} text-blue-400`} title="TypeScript">𝐓</span>,
+    tsx: <span className={`${base} text-blue-400`} title="TSX">⚛</span>,
+    js: <span className={`${base} text-yellow-400`} title="JavaScript">𝐉</span>,
+    jsx: <span className={`${base} text-cyan-400`} title="JSX">⚛</span>,
+    mjs: <span className={`${base} text-yellow-400`} title="Module JS">𝐉</span>,
+    css: <span className={`${base} text-purple-400`} title="CSS">#</span>,
+    scss: <span className={`${base} text-pink-400`} title="SCSS">§</span>,
+    html: <span className={`${base} text-orange-400`} title="HTML">◇</span>,
+    json: <span className={`${base} text-yellow-300`} title="JSON">{"{}"}</span>,
+    md: <span className={`${base} text-slate-400`} title="Markdown">Ⓜ</span>,
+    py: <span className={`${base} text-emerald-400`} title="Python">🐍</span>,
+    go: <span className={`${base} text-cyan-300`} title="Go">Go</span>,
+    rs: <span className={`${base} text-orange-500`} title="Rust">⚙</span>,
+    java: <span className={`${base} text-red-400`} title="Java">☕</span>,
+    yaml: <span className={`${base} text-amber-300`} title="YAML">≡</span>,
+    yml: <span className={`${base} text-amber-300`} title="YAML">≡</span>,
+    toml: <span className={`${base} text-amber-300`} title="TOML">≡</span>,
+    sh: <span className={`${base} text-emerald-300`} title="Shell">$</span>,
+    env: <span className={`${base} text-muted-foreground`} title="Env">⚿</span>,
+    svg: <span className={`${base} text-pink-300`} title="SVG">◈</span>,
+    png: <span className={`${base} text-indigo-300`} title="Image">🖼</span>,
+    jpg: <span className={`${base} text-indigo-300`} title="Image">🖼</span>,
+  }
+
+  return map[ext] ?? <File className={`${base} text-muted-foreground`} />
+}
+
 
 import {
   Collapsible,
@@ -339,7 +374,7 @@ function TemplateNode({
             isActive={isSelected}
             onClick={() => onFileSelect?.({ ...file, filePath })}
             className="flex-1">
-            <File className="h-4 w-4 mr-2 shrink-0" />
+            {getFileIcon(file.fileExtension || "")}
             <span>{fileName}</span>
           </SidebarMenuButton>
 

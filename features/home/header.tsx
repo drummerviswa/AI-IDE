@@ -36,7 +36,7 @@ export function Header() {
                     </div>
 
                     <span className="hidden sm:block font-extrabold text-lg">
-                      ViswaCode Studio
+                      CodeAI
                     </span>
                   </Link>
                   <span className="text-zinc-300 dark:text-zinc-700">|</span>

@@ -71,6 +71,7 @@ model Playground {
   title         String
   description   String?
   template      Templates      @default(REACT)
+  isPublic      Boolean        @default(false)
   templateFiles TemplateFile[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

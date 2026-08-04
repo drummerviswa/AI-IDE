@@ -2,12 +2,7 @@ import AddNewButton from "@/features/dashboard/components/add-new-btn";
 import AddRepo from "@/features/dashboard/components/add-repo";
 import ProjectTable from "@/features/dashboard/components/project-table";
 import Image from "next/image";
-import {
-  deleteProjectById,
-  duplicateProjectById,
-  editProjectById,
-  getAllPlaygroundForUser,
-} from "@/features/playground/actions";
+import { getAllPlaygroundForUser } from "@/features/playground/actions";
 
 const EmptyState = () => (
   <div className="flex flex-col items-center justify-center py-16">
@@ -36,12 +31,17 @@ const PlaygroundsPage = async () => {
         {playgrounds && playgrounds.length === 0 ? (
           <EmptyState />
         ) : (
-          // @ts-expect-error Project type extends table prop shape in current codebase.
           <ProjectTable
-            projects={playgrounds || []}
-            onDeleteProject={deleteProjectById}
-            onUpdateProject={editProjectById}
-            onDuplicateProject={duplicateProjectById}
+            projects={(playgrounds || []).map((p) => ({
+              ...p,
+              description: p.description || "",
+              user: {
+                ...p.user,
+                name: p.user?.name || "",
+                image: p.user?.image || "",
+                role: p.user?.role || "USER",
+              },
+            }))}
           />
         )}
       </div>

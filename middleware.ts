@@ -18,7 +18,13 @@ export default auth((req) => {
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
 
-  const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
+  // Static public routes
+  const isStaticPublicRoute = publicRoutes.includes(nextUrl.pathname);
+
+  // Dynamic public route: /playground/[id]/share
+  const isShareRoute = /^\/playground\/[^/]+\/share(\/.*)?$/.test(nextUrl.pathname);
+
+  const isPublicRoute = isStaticPublicRoute || isShareRoute;
 
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 

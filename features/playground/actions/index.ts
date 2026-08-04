@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { importGitHubRepository, type PlaygroundTemplate } from "../libs/github-import";
 
 
-// Toggle marked status for a problem
+// Toggle marked status for a playground
 export const toggleStarMarked = async (playgroundId: string, isChecked: boolean) => {
     const user = await currentUser();
     const userId = user?.id;
@@ -29,7 +29,6 @@ export const toggleStarMarked = async (playgroundId: string, isChecked: boolean)
           userId_playgroundId: {
             userId,
             playgroundId: playgroundId,
-
           },
         },
       });
@@ -38,8 +37,8 @@ export const toggleStarMarked = async (playgroundId: string, isChecked: boolean)
     revalidatePath("/dashboard");
     return { success: true, isMarked: isChecked };
   } catch (error) {
-    console.error("Error updating problem:", error);
-    return { success: false, error: "Failed to update problem" };
+    console.error("Error updating star mark:", error);
+    return { success: false, error: "Failed to update star mark" };
   }
 };
 
@@ -63,7 +62,7 @@ export const createPlayground = async (data:{
 
         return playground;
     } catch (error) {
-        console.log(error)
+        console.error("Error creating playground:", error);
     }
 }
 
@@ -112,9 +111,8 @@ export const importPlaygroundFromGitHub = async (data: {
 
 
 export const getAllPlaygroundForUser = async ()=>{
-    const user = await currentUser();
     try {
-        const user  = await currentUser();
+        const user = await currentUser();
         const playground = await db.playground.findMany({
             where:{
                 userId:user?.id!
@@ -134,7 +132,7 @@ export const getAllPlaygroundForUser = async ()=>{
       
         return playground;
     } catch (error) {
-        console.log(error)
+        console.error("Error fetching playgrounds:", error);
     }
 }
 
@@ -152,9 +150,56 @@ export const getPlaygroundById = async (id:string)=>{
         })
         return playground;
     } catch (error) {
-        console.log(error)
+        console.error("Error fetching playground by id:", error);
     }
 }
+
+export const getPublicPlaygroundById = async (id: string) => {
+  try {
+    const playground = await db.playground.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        template: true,
+        isPublic: true,
+        templateFiles: {
+          select: {
+            content: true,
+          },
+        },
+        user: {
+          select: {
+            name: true,
+            image: true,
+          },
+        },
+      },
+    });
+    return playground;
+  } catch (error) {
+    console.error("Error fetching public playground:", error);
+    return null;
+  }
+};
+
+export const togglePlaygroundPublic = async (id: string, isPublic: boolean) => {
+  const user = await currentUser();
+  if (!user?.id) throw new Error("Unauthorized");
+
+  try {
+    const playground = await db.playground.update({
+      where: { id, userId: user.id },
+      data: { isPublic },
+    });
+    revalidatePath(`/playground/${id}`);
+    return { success: true, isPublic: playground.isPublic };
+  } catch (error) {
+    console.error("Error toggling playground public status:", error);
+    return { success: false };
+  }
+};
 
 export const SaveUpdatedCode = async (playgroundId: string, data: TemplateFolder) => {
   const user = await currentUser();
@@ -163,7 +208,7 @@ export const SaveUpdatedCode = async (playgroundId: string, data: TemplateFolder
   try {
     const updatedPlayground = await db.templateFile.upsert({
       where: {
-        playgroundId, // now allowed since playgroundId is unique
+        playgroundId,
       },
       update: {
         content: JSON.stringify(data),
@@ -176,7 +221,7 @@ export const SaveUpdatedCode = async (playgroundId: string, data: TemplateFolder
 
     return updatedPlayground;
   } catch (error) {
-    console.log("SaveUpdatedCode error:", error);
+    console.error("SaveUpdatedCode error:", error);
     return null;
   }
 };
@@ -188,7 +233,7 @@ export const deleteProjectById = async (id:string)=>{
         })
         revalidatePath("/dashboard")
     } catch (error) {
-        console.log(error)
+        console.error("Error deleting playground:", error);
     }
 }
 
@@ -201,17 +246,16 @@ export const editProjectById = async (id:string,data:{title:string , description
         })
         revalidatePath("/dashboard")
     } catch (error) {
-        console.log(error)
+        console.error("Error editing playground:", error);
     }
 }
 
 export const duplicateProjectById = async (id: string) => {
     try {
-        // Fetch the original playground data
         const originalPlayground = await db.playground.findUnique({
             where: { id },
             include: {
-                templateFiles: true, // Include related template files
+                templateFiles: true,
             },
         });
 
@@ -219,7 +263,6 @@ export const duplicateProjectById = async (id: string) => {
             throw new Error("Original playground not found");
         }
 
-        // Create a new playground with the same data but a new ID
         const duplicatedPlayground = await db.playground.create({
             data: {
                 title: `${originalPlayground.title} (Copy)`,
@@ -227,15 +270,13 @@ export const duplicateProjectById = async (id: string) => {
                 template: originalPlayground.template,
                 userId: originalPlayground.userId,
                 templateFiles: {
-                  // @ts-ignore
                     create: originalPlayground.templateFiles.map((file) => ({
-                        content: file.content,
+                        content: file.content as Parameters<typeof db.templateFile.create>[0]["data"]["content"],
                     })),
                 },
             },
         });
 
-        // Revalidate the dashboard path to reflect the changes
         revalidatePath("/dashboard");
 
         return duplicatedPlayground;

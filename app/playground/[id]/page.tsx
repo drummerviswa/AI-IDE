@@ -16,6 +16,13 @@ import {
   Package,
   Loader2,
   Blocks,
+  Download,
+  Share2,
+  WandSparkles,
+  Keyboard,
+  Link,
+  Copy,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,16 +45,22 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import WebContainerPreview from "@/features/webcontainers/components/webcontainer-preveiw";
-import TerminalComponent, { type TerminalRef } from "@/features/webcontainers/components/terminal";
-import LoadingStep from "@/components/ui/loader";
+import dynamic from "next/dynamic";
+const WebContainerPreview = dynamic(
+  () => import("@/features/webcontainers/components/webcontainer-preview"),
+  { ssr: false }
+);
+const TerminalComponent = dynamic(
+  () => import("@/features/webcontainers/components/terminal"),
+  { ssr: false }
+);
+import type { TerminalRef } from "@/features/webcontainers/components/terminal";
 import { PlaygroundEditor } from "@/features/playground/components/playground-editor";
 import ToggleAI from "@/features/playground/components/toggle-ai";
 import { useFileExplorer } from "@/features/playground/hooks/useFileExplorer";
 import { usePlayground } from "@/features/playground/hooks/usePlayground";
 import { useAISuggestions } from "@/features/playground/hooks/useAISuggestion";
 import { useWebContainer } from "@/features/webcontainers/hooks/useWebContainer";
-import { SaveUpdatedCode } from "@/features/playground/actions";
 import { TemplateFolder } from "@/features/playground/types";
 import { findFilePath } from "@/features/playground/libs";
 import { ConfirmationDialog } from "@/features/playground/components/dialogs/conformation-dialog";
@@ -61,6 +74,113 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import UserButton from "@/features/auth/components/user-button";
+import { ShortcutsModal } from "@/features/playground/components/shortcuts-modal";
+import { ThemePicker } from "@/features/playground/components/theme-picker";
+import type { EditorTheme } from "@/features/playground/components/theme-picker";
+import { downloadPlaygroundAsZip } from "@/features/playground/libs/zip-export";
+import { togglePlaygroundPublic } from "@/features/playground/actions";
+import { PlaygroundLoader } from "@/features/playground/components/playground-loader";
+
+const isIgnored = (path: string) => {
+  const parts = path.split('/');
+  return parts.some(part => 
+    part === 'node_modules' || 
+    part === '.next' || 
+    part === '.git' || 
+    part === 'dist' || 
+    part === 'build' ||
+    part === '.svelte-kit' ||
+    part === '.nuxt'
+  );
+};
+
+function updateTemplateDataFromFilePath(
+  templateData: TemplateFolder,
+  filePath: string,
+  content: string
+): TemplateFolder {
+  const updated = JSON.parse(JSON.stringify(templateData)) as TemplateFolder;
+  const parts = filePath.split('/');
+  const filename = parts.pop()!;
+  
+  let currentFolder = updated;
+  for (const part of parts) {
+    if (!part) continue;
+    let nextFolder = currentFolder.items.find(
+      (item) => "folderName" in item && item.folderName === part
+    ) as TemplateFolder | undefined;
+    
+    if (!nextFolder) {
+      nextFolder = {
+        folderName: part,
+        items: []
+      };
+      currentFolder.items.push(nextFolder);
+    }
+    currentFolder = nextFolder;
+  }
+  
+  const dotIndex = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIndex === -1 ? filename : filename.slice(0, dotIndex);
+  const ext = dotIndex === -1 ? '' : filename.slice(dotIndex + 1);
+  
+  const existingFileIndex = currentFolder.items.findIndex(
+    (item) =>
+      "filename" in item &&
+      item.filename === nameWithoutExt &&
+      item.fileExtension === ext
+  );
+  
+  if (existingFileIndex !== -1) {
+    const file = currentFolder.items[existingFileIndex] as TemplateFile;
+    if (file.content !== content) {
+      currentFolder.items[existingFileIndex] = {
+        ...file,
+        content
+      };
+    }
+  } else {
+    currentFolder.items.push({
+      filename: nameWithoutExt,
+      fileExtension: ext,
+      content
+    });
+  }
+  
+  return updated;
+}
+
+function deleteTemplateDataFromFilePath(
+  templateData: TemplateFolder,
+  filePath: string
+): TemplateFolder {
+  const updated = JSON.parse(JSON.stringify(templateData)) as TemplateFolder;
+  const parts = filePath.split('/');
+  const filename = parts.pop()!;
+  
+  let currentFolder = updated;
+  for (const part of parts) {
+    if (!part) continue;
+    const nextFolder = currentFolder.items.find(
+      (item) => "folderName" in item && item.folderName === part
+    ) as TemplateFolder | undefined;
+    if (!nextFolder) return templateData;
+    currentFolder = nextFolder;
+  }
+  
+  const dotIndex = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIndex === -1 ? filename : filename.slice(0, dotIndex);
+  const ext = dotIndex === -1 ? '' : filename.slice(dotIndex + 1);
+  
+  currentFolder.items = currentFolder.items.filter(
+    (item) =>
+      !("filename" in item) ||
+      item.filename !== nameWithoutExt ||
+      item.fileExtension !== ext
+  );
+  
+  return updated;
+}
 
 const MainPlaygroundPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +200,12 @@ const MainPlaygroundPage: React.FC = () => {
   const [packageCommand, setPackageCommand] = useState("npm install cors");
   const [isRunningPackageCommand, setIsRunningPackageCommand] = useState(false);
   const [installedExtensions, setInstalledExtensions] = useState<string[]>([]);
+  // New feature state
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isPlaygroundPublic, setIsPlaygroundPublic] = useState(false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorInstanceRef = useRef<any>(null);
 
   const extensionCatalog = [
     {
@@ -133,7 +259,6 @@ const MainPlaygroundPage: React.FC = () => {
     closeAllFiles,
     openFile,
     closeFile,
-    editorContent,
     updateFileContent,
     handleAddFile,
     handleAddFolder,
@@ -154,7 +279,6 @@ const MainPlaygroundPage: React.FC = () => {
     error: containerError,
     instance,
     writeFileSync,
-    // @ts-ignore
   } = useWebContainer({ templateData });
 
   const lastSyncedContent = useRef<Map<string, string>>(new Map());
@@ -215,10 +339,111 @@ const MainPlaygroundPage: React.FC = () => {
 
   // Initialize zustand templateData from usePlayground only on first load
   React.useEffect(() => {
-    if (templateData && !openFiles.length) {
+    if (templateData && !useFileExplorer.getState().templateData) {
       setTemplateData(templateData);
     }
-  }, [templateData, setTemplateData, openFiles.length]);
+  }, [templateData, setTemplateData]);
+
+  // File system watcher to sync WebContainer changes back to the IDE
+  React.useEffect(() => {
+    if (!instance) return;
+
+    let active = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let watcher: any = null;
+
+    const setupWatcher = async () => {
+      try {
+        watcher = instance.fs.watch('/', { recursive: true }, async (event: string, filename: string | Uint8Array) => {
+          if (!active) return;
+          const nameStr = typeof filename === "string" ? filename : new TextDecoder().decode(filename);
+          if (!nameStr || isIgnored(nameStr)) return;
+
+          try {
+            // Read file content from WebContainer VFS
+            let fileContent: string | null = null;
+            let exists = true;
+            try {
+              fileContent = await instance.fs.readFile(nameStr, 'utf-8');
+            } catch {
+              exists = false;
+            }
+
+            // Get current templateData from Zustand
+            const currentData = useFileExplorer.getState().templateData;
+            if (!currentData) return;
+
+            let updatedData = currentData;
+
+            if (exists && fileContent !== null) {
+              // Parse folder parts to check if file already has the same content
+              const parts = nameStr.split('/');
+              const fileBase = parts.pop()!;
+              const dotIndex = fileBase.lastIndexOf('.');
+              const nameWithoutExt = dotIndex === -1 ? fileBase : fileBase.slice(0, dotIndex);
+              const ext = dotIndex === -1 ? '' : fileBase.slice(dotIndex + 1);
+
+              // Traverse currentData to see if the file exists and has different content
+              let currentFolder = currentData;
+              let contentMatches = false;
+              
+              for (const part of parts) {
+                if (!part) continue;
+                const nextFolder = currentFolder.items.find(
+                  (item) => "folderName" in item && item.folderName === part
+                ) as TemplateFolder | undefined;
+                if (nextFolder) currentFolder = nextFolder;
+                else break;
+              }
+
+              const existingFile = currentFolder.items.find(
+                (item) =>
+                  "filename" in item &&
+                  item.filename === nameWithoutExt &&
+                  item.fileExtension === ext
+              ) as TemplateFile | undefined;
+
+              if (existingFile) {
+                contentMatches = existingFile.content === fileContent;
+              }
+
+              if (contentMatches) {
+                // No change needed
+                return;
+              }
+
+              // Update the template data
+              updatedData = updateTemplateDataFromFilePath(currentData, nameStr, fileContent);
+            } else {
+              // Delete the file from templateData if it exists
+              updatedData = deleteTemplateDataFromFilePath(currentData, nameStr);
+            }
+
+            // Update Zustand and save to database
+            setTemplateData(updatedData);
+            await saveTemplateData(updatedData);
+          } catch (err) {
+            console.error("Error handling file watch event:", err);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to set up directory watcher:", err);
+      }
+    };
+
+    setupWatcher();
+
+    return () => {
+      active = false;
+      if (watcher) {
+        try {
+          watcher.close();
+        } catch {
+          // Ignore close error
+        }
+      }
+    };
+  }, [instance, setTemplateData, saveTemplateData]);
 
   // Create wrapper functions that pass saveTemplateData
   const wrappedHandleAddFile = useCallback(
@@ -449,8 +674,8 @@ const MainPlaygroundPage: React.FC = () => {
         }
 
         // Use saveTemplateData to persist changes
-        const newTemplateData = await saveTemplateData(updatedTemplateData);
-        setTemplateData(newTemplateData || updatedTemplateData);
+        await saveTemplateData(updatedTemplateData);
+        setTemplateData(updatedTemplateData);
 
         // Update open files
         const updatedOpenFiles = openFiles.map((f) =>
@@ -513,7 +738,7 @@ const MainPlaygroundPage: React.FC = () => {
     try {
       await Promise.all(unsavedFiles.map((f) => handleSave(f.id)));
       toast.success(`Saved ${unsavedFiles.length} file(s)`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to save some files");
     }
   };
@@ -678,30 +903,9 @@ const MainPlaygroundPage: React.FC = () => {
     );
   }
 
-  // Loading state
+  // Loading state — show animated loader
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh)] p-4">
-        <div className="w-full max-w-md p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-6 text-center">
-            Loading Playground
-          </h2>
-          <div className="mb-8">
-            <LoadingStep
-              currentStep={1}
-              step={1}
-              label="Loading playground data"
-            />
-            <LoadingStep
-              currentStep={2}
-              step={2}
-              label="Setting up environment"
-            />
-            <LoadingStep currentStep={3} step={3} label="Ready to code" />
-          </div>
-        </div>
-      </div>
-    );
+    return <PlaygroundLoader isVisible={true} />;
   }
 
   // No template data
@@ -722,6 +926,9 @@ const MainPlaygroundPage: React.FC = () => {
   return (
     <TooltipProvider>
       <>
+        {/* Full-screen animated loader while WebContainer boots */}
+        <PlaygroundLoader isVisible={containerLoading} />
+
         <div className="h-[calc(100vh)]">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={22} minSize={14} maxSize={35}>
@@ -751,7 +958,10 @@ const MainPlaygroundPage: React.FC = () => {
                       </h1>
                       <p className="text-xs text-muted-foreground">
                         {openFiles.length} file(s) open
-                        {hasUnsavedChanges && " • Unsaved changes"}
+                        {hasUnsavedChanges && " • "}
+                        {hasUnsavedChanges && (
+                          <span className="text-amber-500">Unsaved changes</span>
+                        )}
                       </p>
                     </div>
 
@@ -781,6 +991,104 @@ const MainPlaygroundPage: React.FC = () => {
                         </TooltipTrigger>
                         <TooltipContent>Save All (Ctrl+Shift+S)</TooltipContent>
                       </Tooltip>
+
+                      {/* Format Document */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (editorInstanceRef.current) {
+                                editorInstanceRef.current.trigger("format", "editor.action.formatDocument", null)
+                                toast.success("Document formatted")
+                              }
+                            }}>
+                            <WandSparkles className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Format Document (Alt+Shift+F)</TooltipContent>
+                      </Tooltip>
+
+                      {/* Download ZIP */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              if (!templateData) { toast.error("No files to download"); return; }
+                              try {
+                                await downloadPlaygroundAsZip(templateData, playgroundData?.name || "playground")
+                                toast.success("Download started")
+                              } catch { toast.error("Failed to create ZIP") }
+                            }}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download as ZIP</TooltipContent>
+                      </Tooltip>
+
+                      {/* Theme Picker */}
+                      <ThemePicker
+                        onThemeChange={(theme: EditorTheme) => {
+                          window.dispatchEvent(new CustomEvent("viswacode:theme-change", { detail: { theme } }))
+                        }}
+                      />
+
+                      {/* Share */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant={isPlaygroundPublic ? "default" : "outline"}
+                            disabled={isTogglingPublic}
+                            className="gap-1.5">
+                            <Share2 className="h-4 w-4" />
+                            <span className="hidden lg:inline text-xs">{isPlaygroundPublic ? "Shared" : "Share"}</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem onClick={async () => {
+                            setIsTogglingPublic(true)
+                            try {
+                              const newVal = !isPlaygroundPublic
+                              const result = await togglePlaygroundPublic(id, newVal)
+                              if (result.success) {
+                                setIsPlaygroundPublic(newVal)
+                                if (newVal) {
+                                  const url = `${window.location.origin}/playground/${id}/share`
+                                  await navigator.clipboard.writeText(url)
+                                  toast.success("Share link copied!", { description: url, duration: 5000 })
+                                } else {
+                                  toast.info("Playground set to private")
+                                }
+                              } else { toast.error("Failed to update share settings") }
+                            } catch { toast.error("Failed to update share settings") }
+                            finally { setIsTogglingPublic(false) }
+                          }}>
+                            {isPlaygroundPublic ? (
+                              <><Lock className="h-4 w-4 mr-2" />Make Private</>
+                            ) : (
+                              <><Link className="h-4 w-4 mr-2" />Make Public & Copy Link</>
+                            )}
+                          </DropdownMenuItem>
+                          {isPlaygroundPublic && (
+                            <DropdownMenuItem onClick={async () => {
+                              const url = `${window.location.origin}/playground/${id}/share`
+                              await navigator.clipboard.writeText(url)
+                              toast.success("Share link copied!")
+                            }}>
+                              <Copy className="h-4 w-4 mr-2" />Copy Share Link
+                            </DropdownMenuItem>
+                          )}
+                          {isPlaygroundPublic && (
+                            <DropdownMenuItem onClick={() => window.open(`/playground/${id}/share`, "_blank")}>
+                              Preview Share Page
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
 
                       <ToggleAI
                         isEnabled={aiSuggestions.isEnabled}
@@ -845,8 +1153,23 @@ const MainPlaygroundPage: React.FC = () => {
                           <DropdownMenuItem onClick={closeAllFiles}>
                             Close All Files
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setIsShortcutsOpen(true)}>
+                            <Keyboard className="h-4 w-4 mr-2" />
+                            Keyboard Shortcuts
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+
+                      {/* Shortcuts button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 px-0"
+                        onClick={() => setIsShortcutsOpen(true)}
+                        title="Keyboard shortcuts">
+                        <Keyboard className="h-4 w-4" />
+                      </Button>
 
                       <UserButton />
                     </div>
@@ -990,6 +1313,11 @@ const MainPlaygroundPage: React.FC = () => {
           setIsOpen={(open) =>
             setConfirmationDialog((prev) => ({ ...prev, isOpen: open }))
           }
+        />
+
+        <ShortcutsModal
+          isOpen={isShortcutsOpen}
+          onClose={() => setIsShortcutsOpen(false)}
         />
 
         <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>

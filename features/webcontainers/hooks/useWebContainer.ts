@@ -33,7 +33,7 @@ function destroySharedWebContainer() {
 }
 
 interface UseWebContainerProps {
-  templateData: TemplateFolder;
+  templateData?: TemplateFolder | null;
 }
 
 interface UseWebContainerReturn {

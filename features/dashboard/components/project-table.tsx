@@ -62,6 +62,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MarkedToggleButton } from "./toggle-star";
+import {
+  deleteProjectById,
+  duplicateProjectById,
+  editProjectById,
+} from "@/features/playground/actions";
 
 interface ProjectTableProps {
   projects: Project[];
@@ -128,11 +133,12 @@ export default function ProjectTable({
   };
 
   const handleUpdateProject = async () => {
-    if (!selectedProject || !onUpdateProject) return;
+    if (!selectedProject) return;
 
     setIsLoading(true);
     try {
-      await onUpdateProject(selectedProject.id, editData);
+      const updateFn = onUpdateProject || editProjectById;
+      await updateFn(selectedProject.id, editData);
       setEditDialogOpen(false);
       setSelectedProject(null);
       toast.success("Project updated successfully");
@@ -160,11 +166,12 @@ export default function ProjectTable({
   };
 
   const handleDeleteProject = async () => {
-    if (!selectedProject || !onDeleteProject) return;
+    if (!selectedProject) return;
 
     setIsLoading(true);
     try {
-      await onDeleteProject(selectedProject.id);
+      const deleteFn = onDeleteProject || deleteProjectById;
+      await deleteFn(selectedProject.id);
       setDeleteDialogOpen(false);
       setSelectedProject(null);
       toast.success("Project deleted successfully");
@@ -177,11 +184,10 @@ export default function ProjectTable({
   };
 
   const handleDuplicateProject = async (project: Project) => {
-    if (!onDuplicateProject) return;
-
     setIsLoading(true);
     try {
-      await onDuplicateProject(project.id);
+      const duplicateFn = onDuplicateProject || duplicateProjectById;
+      await duplicateFn(project.id);
       toast.success("Project duplicated successfully");
     } catch (error) {
       toast.error("Failed to duplicate project");

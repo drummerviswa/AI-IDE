@@ -1,4 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { GoogleGenerativeAI } from "@google/generative-ai"
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite"
+const OLLAMA_URL = process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate"
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "codellama:latest"
 
 interface CodeSuggestionRequest {
   fileContent: string
@@ -50,9 +56,10 @@ export async function POST(request: NextRequest) {
         generatedAt: new Date().toISOString(),
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error("Context analysis error:", error)
-    return NextResponse.json({ error: "Internal server error", message: error.message }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({ error: "Internal server error", message: errorMessage }, { status: 500 })
   }
 }
 
@@ -128,43 +135,67 @@ Generate suggestion:`
  * Generate suggestion using AI service
  */
 async function generateSuggestion(prompt: string): Promise<string> {
+  // 1. Try Gemini
+  if (GEMINI_API_KEY) {
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        generationConfig: {
+          temperature: 0.2, // lower temperature for more precise completion
+          maxOutputTokens: 300,
+        },
+      });
+
+      const result = await model.generateContent(prompt);
+      let text = result.response.text();
+      
+      if (text) {
+        // Clean up markdown block if returned
+        if (text.includes("```")) {
+          const codeMatch = text.match(/```[\w]*\n?([\s\S]*?)```/);
+          text = codeMatch ? codeMatch[1].trim() : text;
+        }
+        text = text.replace(/\|CURSOR\|/g, "").trim();
+        return text;
+      }
+    } catch (geminiError) {
+      console.warn("Gemini code completion failed, trying Ollama...", geminiError);
+    }
+  }
+
+  // 2. Try Ollama fallback
   try {
-    // Replace this with your actual AI service call
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const response = await fetch(OLLAMA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "codellama:latest",
+        model: OLLAMA_MODEL,
         prompt,
         stream: false,
         options: {
-          temperature: 0.7,
+          temperature: 0.2,
           max_tokens: 300,
         },
       }),
-    })
+    });
 
-    if (!response.ok) {
-      throw new Error(`AI service error: ${response.statusText}`)
+    if (response.ok) {
+      const data = await response.json();
+      let suggestion = data.response;
+
+      if (suggestion.includes("```")) {
+        const codeMatch = suggestion.match(/```[\w]*\n?([\s\S]*?)```/);
+        suggestion = codeMatch ? codeMatch[1].trim() : suggestion;
+      }
+      suggestion = suggestion.replace(/\|CURSOR\|/g, "").trim();
+      return suggestion;
     }
-
-    const data = await response.json()
-    let suggestion = data.response
-
-    // Clean up the suggestion
-    if (suggestion.includes("```")) {
-      const codeMatch = suggestion.match(/```[\w]*\n?([\s\S]*?)```/)
-      suggestion = codeMatch ? codeMatch[1].trim() : suggestion
-    }
-
-    // Remove cursor markers if present
-    suggestion = suggestion.replace(/\|CURSOR\|/g, "").trim()
-
-    return suggestion
   } catch (error) {
-    console.error("AI generation error:", error)
-    return "// AI suggestion unavailable"
+    console.error("Ollama fallback also failed:", error);
   }
+
+  return "// AI suggestion unavailable";
 }
 
 // Helper functions for code analysis
@@ -237,11 +268,4 @@ function detectIncompletePatterns(line: string, column: number): string[] {
 
   return patterns
 }
-
-function getLastNonEmptyLine(lines: string[], currentLine: number): string {
-  for (let i = currentLine - 1; i >= 0; i--) {
-    const line = lines[i]
-    if (line.trim() !== "") return line
-  }
-  return ""
-}
+
