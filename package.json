@@ -5,7 +5,7 @@
   "author": "Viswanathan P",
   "scripts": {
     "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
-    "build": "node --use-system-ca ./node_modules/next/dist/bin/next build",
+    "build": "prisma generate && node --use-system-ca ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint"
   },
