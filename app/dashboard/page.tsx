@@ -14,6 +14,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Code2, FolderOpen, Star, Layers } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 const templateColors: Record<string, string> = {
   REACT: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
   NEXTJS: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30",
