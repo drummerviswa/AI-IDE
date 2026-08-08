@@ -29,7 +29,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  reactStrictMode:false
+  reactStrictMode:false,
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/template/[id]': ['./vibecode-starters/**/*'],
+    },
+  },
 };
 
 export default nextConfig;
