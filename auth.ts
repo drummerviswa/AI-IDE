@@ -51,13 +51,22 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const errorLogPath = path.join("/tmp", "auth-error.json");
         const serializeError = (err: any): any => {
           if (!err) return null;
-          return {
-            name: err.name || "Error",
-            message: err.message || String(err),
-            stack: err.stack || "",
-            code: err.code || "",
-            cause: err.cause ? serializeError(err.cause) : undefined,
-          };
+          const obj: any = {};
+          Object.getOwnPropertyNames(err).forEach(key => {
+            const val = err[key];
+            if (key === "cause") {
+              obj[key] = serializeError(val);
+            } else if (val && typeof val === "object") {
+              try {
+                obj[key] = JSON.parse(JSON.stringify(val));
+              } catch (e) {
+                obj[key] = String(val);
+              }
+            } else {
+              obj[key] = val;
+            }
+          });
+          return obj;
         };
         fs.writeFileSync(errorLogPath, JSON.stringify({
           error: serializeError(error),
