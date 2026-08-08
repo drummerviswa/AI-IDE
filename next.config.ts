@@ -30,10 +30,8 @@ const nextConfig: NextConfig = {
     ];
   },
   reactStrictMode:false,
-  experimental: {
-    outputFileTracingIncludes: {
-      '/api/template/[id]': ['./vibecode-starters/**/*'],
-    },
+  outputFileTracingIncludes: {
+    '/api/template/[id]': ['./vibecode-starters/**/*'],
   },
 };
 
