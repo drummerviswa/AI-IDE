@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { db } from "@/lib/db";
 
 export async function GET(req: Request) {
   const getStatus = (val: string | undefined) => {
@@ -24,6 +25,16 @@ export async function GET(req: Request) {
     headersObj[key] = value;
   });
 
+  let dbConnectionStatus = "NOT_TESTED";
+  try {
+    // Run a quick count query on User model to check connectivity
+    await db.user.count();
+    dbConnectionStatus = "SUCCESSFUL";
+  } catch (e) {
+    const err = e as Error;
+    dbConnectionStatus = `FAILED: ${err.message || String(e)}`;
+  }
+
   let authErrorLog = null;
   try {
     const errorLogPath = path.join("/tmp", "auth-error.json");
@@ -44,6 +55,7 @@ export async function GET(req: Request) {
     AUTH_GOOGLE_ID: getStatus(process.env.AUTH_GOOGLE_ID),
     DATABASE_URL: getSafeDbUrl(process.env.DATABASE_URL),
     NODE_ENV: process.env.NODE_ENV || "not_set",
+    PRISMA_DB_CONNECTION: dbConnectionStatus,
     REQUEST_HEADERS: {
       host: headersObj["host"] || "not_found",
       "x-forwarded-host": headersObj["x-forwarded-host"] || "not_found",
