@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Apply to all routes
-        source: '/:path*',
+        // Apply only to active playground routes where WebContainers are executed
+        source: '/playground/:id',
         headers: [
           {
             key: 'Cross-Origin-Opener-Policy',

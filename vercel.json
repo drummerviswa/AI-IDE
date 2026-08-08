@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/playground/:id",
       "headers": [
         {
           "key": "Cross-Origin-Embedder-Policy",
