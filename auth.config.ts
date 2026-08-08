@@ -4,6 +4,7 @@ import type { NextAuthConfig } from "next-auth"
 
 export default{
     trustHost: true,
+    secret: process.env.AUTH_SECRET,
     providers:[
         GitHub({
             clientId: process.env.AUTH_GITHUB_ID,
