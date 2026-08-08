@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 
 export async function GET(req: Request) {
   const getStatus = (val: string | undefined) => {
@@ -22,6 +24,18 @@ export async function GET(req: Request) {
     headersObj[key] = value;
   });
 
+  let authErrorLog = null;
+  try {
+    const errorLogPath = path.join("/tmp", "auth-error.json");
+    if (fs.existsSync(errorLogPath)) {
+      authErrorLog = JSON.parse(fs.readFileSync(errorLogPath, "utf-8"));
+    } else {
+      authErrorLog = "NO_ERROR_LOG_FOUND";
+    }
+  } catch (e) {
+    authErrorLog = { error: "Failed to read logs", detail: String(e) };
+  }
+
   return NextResponse.json({
     AUTH_SECRET: getStatus(process.env.AUTH_SECRET),
     AUTH_URL: getFullValueOrMissing(process.env.AUTH_URL),
@@ -34,6 +48,7 @@ export async function GET(req: Request) {
       host: headersObj["host"] || "not_found",
       "x-forwarded-host": headersObj["x-forwarded-host"] || "not_found",
       "x-forwarded-proto": headersObj["x-forwarded-proto"] || "not_found",
-    }
+    },
+    LATEST_AUTH_ERROR: authErrorLog
   });
 }

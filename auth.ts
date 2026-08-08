@@ -43,5 +43,30 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
+  logger: {
+    error(error) {
+      try {
+        const fs = require("fs");
+        const path = require("path");
+        const errorLogPath = path.join("/tmp", "auth-error.json");
+        const serializeError = (err: any): any => {
+          if (!err) return null;
+          return {
+            name: err.name || "Error",
+            message: err.message || String(err),
+            stack: err.stack || "",
+            code: err.code || "",
+            cause: err.cause ? serializeError(err.cause) : undefined,
+          };
+        };
+        fs.writeFileSync(errorLogPath, JSON.stringify({
+          error: serializeError(error),
+          timestamp: new Date().toISOString()
+        }, null, 2));
+      } catch (e) {
+        // ignore
+      }
+    }
+  },
   ...authConfig,
 })
