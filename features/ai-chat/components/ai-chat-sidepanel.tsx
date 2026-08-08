@@ -353,9 +353,9 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
         setChatMode(customEvent.detail.mode);
       }
     };
-    window.addEventListener("codeai:prefill-chat", handlePrefill);
+    window.addEventListener("vibe-ai-ide:prefill-chat", handlePrefill);
     return () => {
-      window.removeEventListener("codeai:prefill-chat", handlePrefill);
+      window.removeEventListener("vibe-ai-ide:prefill-chat", handlePrefill);
     };
   }, []);
 
@@ -1093,7 +1093,7 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-zinc-100">
-                    CodeAI Copilot
+                    VibeAI Copilot
                   </h2>
                   <p className="text-sm text-zinc-400">
                     {activeFileName

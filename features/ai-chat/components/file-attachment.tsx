@@ -546,7 +546,7 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
                 <Bot className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100">CodeAI Assistant</h2>
+                <h2 className="text-lg font-semibold text-zinc-100">VibeAI Assistant</h2>
                 <p className="text-sm text-zinc-400">With file attachments & code insertion</p>
               </div>
             </div>
@@ -590,7 +590,7 @@ export const FileAttachmentChat: React.FC<FileAttachmentChatProps> = ({ isOpen, 
                 <div className="relative w-16 h-16 border rounded-full flex flex-col justify-center items-center mx-auto mb-4">
                   <Bot className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-zinc-300">CodeAI Assistant</h3>
+                <h3 className="text-xl font-semibold mb-3 text-zinc-300">VibeAI Assistant</h3>
                 <p className="text-zinc-400 max-w-md mx-auto leading-relaxed mb-6">
                   Attach code files, get AI suggestions, and insert code directly into your editor. Paste code or drag &
                   drop files to get started!

@@ -85,9 +85,9 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
     const handleOpenChat = () => {
       setIsChatOpen(true);
     };
-    window.addEventListener("codeai:open-chat", handleOpenChat);
+    window.addEventListener("vibe-ai-ide:open-chat", handleOpenChat);
     return () => {
-      window.removeEventListener("codeai:open-chat", handleOpenChat);
+      window.removeEventListener("vibe-ai-ide:open-chat", handleOpenChat);
     };
   }, []);
 

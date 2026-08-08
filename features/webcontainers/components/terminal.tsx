@@ -457,8 +457,8 @@ const TerminalComponent = forwardRef<TerminalRef, TerminalProps>(({
     }
 
     // Trigger the global custom events to open the AI Chat panel & prefill it
-    window.dispatchEvent(new CustomEvent("codeai:open-chat"));
-    window.dispatchEvent(new CustomEvent("codeai:prefill-chat", {
+    window.dispatchEvent(new CustomEvent("vibe-ai-ide:open-chat"));
+    window.dispatchEvent(new CustomEvent("vibe-ai-ide:prefill-chat", {
       detail: {
         text: `Analyze and help me fix this terminal error/output:\n\n\`\`\`bash\n${content.trim()}\n\`\`\``,
         mode: "fix"

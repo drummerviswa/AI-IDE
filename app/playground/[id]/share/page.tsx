@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: Props) {
     return { title: "Playground Not Found" }
   }
   return {
-    title: `${playground.title} | CodeAI`,
-    description: playground.description || `A ${playground.template} playground shared via CodeAI`,
+    title: `${playground.title} | vibe-ai-ide`,
+    description: playground.description || `A ${playground.template} playground shared via vibe-ai-ide`,
   }
 }
 
@@ -38,7 +38,7 @@ export default async function SharePlaygroundPage({ params }: Props) {
         <h1 className="text-2xl font-bold">This playground is private</h1>
         <p className="text-muted-foreground">The owner hasn&apos;t made this playground public yet.</p>
         <Link href="/" className="text-primary hover:underline text-sm">
-          Go to CodeAI →
+          Go to vibe-ai-ide →
         </Link>
       </div>
     )
@@ -96,7 +96,7 @@ export default async function SharePlaygroundPage({ params }: Props) {
       <header className="border-b border-border/60 bg-card/70 backdrop-blur-sm px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="text-sm font-semibold text-primary hover:underline">
-            CodeAI
+            vibe-ai-ide
           </Link>
           <span className="text-muted-foreground">/</span>
           <h1 className="text-sm font-medium">{playground.title}</h1>
@@ -174,7 +174,7 @@ export default async function SharePlaygroundPage({ params }: Props) {
           href="/auth/sign-in"
           className="text-sm font-medium text-primary hover:underline"
         >
-          Sign in to CodeAI →
+          Sign in to vibe-ai-ide →
         </Link>
       </div>
     </div>

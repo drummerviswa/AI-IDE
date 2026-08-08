@@ -139,7 +139,7 @@ export default function Home() {
 
         {/* Subtitle */}
         <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg md:text-xl">
-          <span className="font-semibold text-foreground">CodeAI</span>{" "}
+          <span className="font-semibold text-foreground">vibe-ai-ide</span>{" "}
           — where Monaco Editor, WebContainers, and AI assistance meet in your
           browser.
         </p>
@@ -184,7 +184,7 @@ export default function Home() {
               <span className="h-3 w-3 rounded-full bg-amber-400" />
               <span className="h-3 w-3 rounded-full bg-emerald-500" />
             </div>
-            <span className="text-xs text-white/40 font-mono">index.ts — CodeAI</span>
+            <span className="text-xs text-white/40 font-mono">index.ts — vibe-ai-ide</span>
             <Badge className="gap-1 bg-violet-600/30 text-violet-300 border-violet-500/30 text-xs px-2 py-0.5">
               <Sparkles className="h-3 w-3" />
               AI ✨
@@ -398,7 +398,7 @@ export default function Home() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          CodeAI — AI-Powered Web IDE · {new Date().getFullYear()}
+          vibe-ai-ide — AI-Powered Web IDE · {new Date().getFullYear()}
         </p>
       </section>
     </div>

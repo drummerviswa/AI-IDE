@@ -6,13 +6,13 @@ import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "CodeAI — AI-Powered Web IDE",
+  title: "vibe-ai-ide — AI-Powered Web IDE",
   description:
-    "CodeAI is an AI-powered browser-based IDE. Code, run, and ship full-stack projects instantly — with Monaco Editor, WebContainers, and Gemini AI built in.",
-  keywords: ["AI IDE", "browser IDE", "Monaco Editor", "WebContainers", "CodeAI"],
+    "vibe-ai-ide is an AI-powered browser-based IDE. Code, run, and ship full-stack projects instantly — with Monaco Editor, WebContainers, and Gemini AI built in.",
+  keywords: ["AI IDE", "browser IDE", "Monaco Editor", "WebContainers", "vibe-ai-ide"],
   authors: [{ name: "Viswanathan P" }],
   openGraph: {
-    title: "CodeAI — AI-Powered Web IDE",
+    title: "vibe-ai-ide — AI-Powered Web IDE",
     description: "Code, run, and ship full-stack projects instantly in your browser.",
     type: "website",
   },

@@ -6,8 +6,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | CodeAI",
-    default: "CodeAI — AI-Powered Web IDE",
+    template: "%s | vibe-ai-ide",
+    default: "vibe-ai-ide — AI-Powered Web IDE",
   },
 };
 

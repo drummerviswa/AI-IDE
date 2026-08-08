@@ -91,7 +91,7 @@ export function DashboardSidebar({ initialPlaygroundData }: { initialPlaygroundD
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background text-primary">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="group-data-[collapsible=icon]:hidden text-sm font-semibold">CodeAI</span>
+          <span className="group-data-[collapsible=icon]:hidden text-sm font-semibold">Vibe AI IDE</span>
         </div>
       </SidebarHeader>
 

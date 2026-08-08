@@ -174,7 +174,7 @@ export function PlaygroundLoader({ isVisible }: PlaygroundLoaderProps) {
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-white mb-1">
-            CodeAI
+            vibe-ai-ide
           </h1>
           <p className="text-sm" style={{ color: "hsl(260 30% 65%)" }}>
             Preparing your playground{dots}

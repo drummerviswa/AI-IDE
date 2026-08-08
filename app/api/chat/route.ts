@@ -192,7 +192,7 @@ async function generateAI(prompt: string, systemInstruction: string, timeoutMs =
 
 // ─── Chat (streaming via Gemini, non-streaming via Ollama) ───────────────────
 
-const CHAT_SYSTEM_PROMPT = `You are an expert AI coding assistant embedded in CodeAI, a browser-based IDE. You help developers with:
+const CHAT_SYSTEM_PROMPT = `You are an expert AI coding assistant embedded in vibe-ai-ide, a browser-based IDE. You help developers with:
 - Code explanations and debugging
 - Best practices and architecture advice
 - Writing clean, efficient code
